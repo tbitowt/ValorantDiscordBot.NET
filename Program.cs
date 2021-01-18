@@ -37,6 +37,8 @@ namespace DiscordBot
                     return;
                 }
                 
+                services.GetService<ValorantApiService>().SetRegion("eu");
+                
                 var client = services.GetRequiredService<DiscordSocketClient>();
 
                 client.Log += Log;
@@ -68,6 +70,7 @@ namespace DiscordBot
                 .AddSingleton<CommandHandlingService>()
                 .AddSingleton<EnvReader>()
                 .AddSingleton<EnvCheckerService>()
+                .AddSingleton<ValorantApiService>()
                 .BuildServiceProvider();
         }
     }
