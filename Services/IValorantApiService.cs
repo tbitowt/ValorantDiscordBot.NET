@@ -1,4 +1,6 @@
-﻿namespace DiscordBot.Services
+﻿using System.Threading.Tasks;
+
+namespace DiscordBot.Services
 {
     public class PlayerRank
     {
@@ -7,14 +9,21 @@
         public int Progress { get; set; }
         public int MatchesLeftForRank { get; set; }
     }
+
+    public class ValorantPlayerIds
+    {
+        public string Name { get; set; }
+        public string Tag { get; set; }
+    }
     public interface IValorantApiService
     {
         
         string AccessToken { get; }
         string EntitlementToken { get; }
-        bool Login();
+        Task<bool> Login();
 
-        PlayerRank GetPlayerRank(string playerId);
+        Task<PlayerRank> GetPlayerRank(string playerId);
 
+        Task<ValorantPlayerIds> GetPlayerIds(string playerId);
     }
 }

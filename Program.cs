@@ -5,9 +5,11 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using DiscordBot.Models.Database;
 using DiscordBot.Services;
 using dotenv.net;
 using dotenv.net.Utilities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RestSharp;
 
@@ -27,6 +29,10 @@ namespace DiscordBot
         public async Task MainAsync()
         {
             DotEnv.AutoConfig();
+            using (var db = new DatabaseDbContext())
+            {
+                await db.Database.MigrateAsync();
+            }
             using (var services = ConfigureServices())
             {
                 var envCheckerService = services.GetService<EnvCheckerService>();
@@ -36,9 +42,13 @@ namespace DiscordBot
                 {
                     return;
                 }
+
+                var valorantApiService = services.GetService<ValorantApiService>();
+                valorantApiService.SetRegion("eu");
+                var loginResult = await valorantApiService.Login();
                 
-                services.GetService<ValorantApiService>().SetRegion("eu");
-                
+
+
                 var client = services.GetRequiredService<DiscordSocketClient>();
 
                 client.Log += Log;

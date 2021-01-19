@@ -8,6 +8,11 @@
     <ItemGroup>
       <PackageReference Include="Discord.Net" Version="2.2.0" />
       <PackageReference Include="dotenv.net" Version="2.1.3" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.2" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.2">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
       <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.1" />
       <PackageReference Include="RestSharp" Version="106.11.7" />
     </ItemGroup>
