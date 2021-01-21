@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Discord;
 using Discord.Commands;
 using DiscordBot.Models.Database;
 using DiscordBot.Services;
@@ -12,12 +13,19 @@ namespace DiscordBot.Commands
         public ValorantApiService ValorantApiService { get; set; }
         
         [Command("rank")]
-        public async Task RankMe()
+        public async Task RankCommand()
+        {
+            await RankCommand(Context.User);
+        }
+
+
+        [Command("rank")]
+        public async Task RankCommand(IUser discordUser)
         {
             using (var db = new DatabaseDbContext())
             {
                 var user = await db.DiscordUsers.Include(user => user.ValorantAccounts)
-                    .FirstOrDefaultAsync(user => user.DiscordUserId == Context.User.Id);
+                    .FirstOrDefaultAsync(user => user.DiscordUserId == discordUser.Id);
 
                 if (user == null || user.ValorantAccounts.Count == 0)
                 {
@@ -29,12 +37,7 @@ namespace DiscordBot.Commands
                 foreach (var valorantAccount in user.ValorantAccounts)
                 {
                     var playerRank = await ValorantApiService.GetPlayerRank(valorantAccount.Subject);
-                    if (playerRank != null)
-                    {
-                        valorantAccount.Rank = playerRank.RankInt;
-                        valorantAccount.RankName = playerRank.RankString;
-                        valorantAccount.RankProgress = playerRank.Progress;
-                    }
+                    valorantAccount.UpdateRank(playerRank);
 
                     var playerIDs = await ValorantApiService.GetPlayerIds(valorantAccount.Subject);
                     if (playerIDs != null)

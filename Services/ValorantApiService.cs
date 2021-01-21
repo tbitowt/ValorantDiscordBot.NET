@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DiscordBot.Models;
 using DiscordBot.Models.API;
+using DiscordBot.Models.Database;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RestSharp;
@@ -26,7 +27,7 @@ namespace DiscordBot.Services
         
         private String[] _rank_map = new String[]
         {
-            "Unknown", "Unknown", "Unknown 2", "Iron 1", "Iron 2", "Iron 3", "Bronze 1", "Bronze 2", "Bronze 3",
+            "Unrated", "Unknown", "Unknown", "Iron 1", "Iron 2", "Iron 3", "Bronze 1", "Bronze 2", "Bronze 3",
             "Silver 1", "Silver 2", "Silver 3", "Gold 1", "Gold 2", "Gold 3", "Platinum 1", "Platinum 2",
             "Platinum 3", "Diamond 1", "Diamond 2", "Diamond 3", "Immortal 1", "Immortal 2", "Immortal 3",
             "Radiant"
@@ -127,7 +128,13 @@ namespace DiscordBot.Services
                 return false;
             }
 
-            _restClient.AddDefaultHeader("X-Riot-ClientVersion", "release-02.00-shipping-16-508517");
+            using (var db = new DatabaseDbContext())
+            {
+                foreach (var customHeader in db.CustomHeaders)
+                {
+                    _restClient.AddDefaultHeader(customHeader.Name, customHeader.Value);
+                }
+            }
             return true;
         }
 

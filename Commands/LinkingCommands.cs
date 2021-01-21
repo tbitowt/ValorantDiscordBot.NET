@@ -12,20 +12,97 @@ namespace DiscordBot.Commands
     public class LinkingCommands: ModuleBase<SocketCommandContext>
     {
         public ValorantApiService ValorantApiService { get; set; }
+        public ExternalApiService ExternalApiService { get; set; }
 
         [Command("link")]
-        public async Task LinkCommand(IUser user, string subject)
+        public async Task LinkCommand(IUser user, [Remainder]string subject)
         {
+            await Context.Channel.TriggerTypingAsync();
+            if (subject.Contains('#'))
+            {
+                var strings = subject.Split('#');
+
+                subject = await ExternalApiService.GetPlayerPuuid(strings[0], strings[1]);
+
+            }
             var socketUser = user as SocketUser;
+            
             await LinkAccount(socketUser, subject);
         }
 
         [Command("link")]
-        public async Task LinkCommand(string subject)
+        public async Task LinkCommand([Remainder] string subject)
         {
+            await Context.Channel.TriggerTypingAsync();
+            if (subject.Contains('#'))
+            {
+                var strings = subject.Split('#');
+
+                subject = await ExternalApiService.GetPlayerPuuid(strings[0], strings[1]);
+
+            }
+            
             await LinkAccount(Context.User, subject);
         }
 
+        [Command("unlink")]
+        public async Task UnlinkCommand(string subject)
+        {
+            await Context.Channel.TriggerTypingAsync();
+            await UnlinkAccount(Context.User, subject);
+        }
+        
+        [Command("unlink")]
+        public async Task UnlinkCommand(IUser user, string subject)
+        {
+            await Context.Channel.TriggerTypingAsync();
+            var socketUser = user as SocketUser;
+            await UnlinkAccount(socketUser, subject);
+        }
+        
+        [Command("unlink")]
+        public async Task UnlinkCommand()
+        {
+            await Context.Channel.TriggerTypingAsync();
+            using (var db = new DatabaseDbContext())
+            {
+                var user = db.DiscordUsers.Include(user => user.ValorantAccounts).SingleOrDefault(user => user.DiscordUserId == Context.User.Id);
+                if (user == null || user.ValorantAccounts.Count == 0)
+                {
+                    await Context.Channel.SendMessageAsync($"User does not have assigned valorant accounts");
+                }
+                else
+                {
+                    var msg = "Assigned accounts:\n";
+                    foreach (var valorantAccount in user.ValorantAccounts)
+                    {
+                        msg += $"`{valorantAccount.Subject}\t:\t{valorantAccount.DisplayName}`\n";
+                    }
+                    await Context.Channel.SendMessageAsync(msg);
+                }
+            }
+        }
+
+        private async Task UnlinkAccount(SocketUser discordUser, string subject)
+        {
+            using (var db = new DatabaseDbContext())
+            {
+                var user = db.DiscordUsers.Include(user => user.ValorantAccounts)
+                    .SingleOrDefault(user => user.DiscordUserId == discordUser.Id);
+
+                var acc = user?.ValorantAccounts.FirstOrDefault(acc => acc.Subject == subject);
+                if (acc != null)
+                {
+                    user.ValorantAccounts.Remove(acc);
+                    await Context.Channel.SendMessageAsync($"Account {acc.DisplayName} unlinked from the user");
+                }
+                else
+                {
+                    await Context.Channel.SendMessageAsync($"The user does not have assigned requested account");
+                }
+            }
+        }
+        
         private async Task LinkAccount(SocketUser discordUser, string subject)
         {
             using (var db = new DatabaseDbContext())
@@ -60,6 +137,7 @@ namespace DiscordBot.Commands
                     user = new DiscordUser() {Name = discordUser.Username, DiscordUserId = discordUser.Id};
                     user.ValorantAccounts.Add(valorantAccount);
                     await db.DiscordUsers.AddAsync(user);
+                    await Context.Channel.SendMessageAsync($"Account {valorantAccount.DisplayName} ( {valorantAccount.RankName} )  lined to user {user.Name}");
                 }
 
                 else
@@ -68,6 +146,7 @@ namespace DiscordBot.Commands
                     if (account == null)
                     {
                         user.ValorantAccounts.Add(valorantAccount);
+                        await Context.Channel.SendMessageAsync($"Account {valorantAccount.DisplayName} ( {valorantAccount.RankName} ) lined to user {user.Name}");
                     }
                     else
                     {
@@ -76,9 +155,9 @@ namespace DiscordBot.Commands
                         account.RankName = valorantAccount.RankName;
                         account.RankProgress = valorantAccount.RankProgress;
                         db.Update(account);
+                        await Context.Channel.SendMessageAsync($"Account {valorantAccount.DisplayName} ( {valorantAccount.RankName} ) already linked to user {user.Name}");
                     }
                 }
-
 
                 await db.SaveChangesAsync();
             }

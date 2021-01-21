@@ -3,31 +3,20 @@ using System;
 using DiscordBot.Models.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace DiscordBot.Migrations
 {
     [DbContext(typeof(DatabaseDbContext))]
-    partial class DbContextServiceModelSnapshot : ModelSnapshot
+    [Migration("20210120194707_Fixed guild connections")]
+    partial class Fixedguildconnections
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "5.0.2");
-
-            modelBuilder.Entity("DiscordBot.Models.Database.CustomHeader", b =>
-                {
-                    b.Property<string>("Name")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Value")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Name");
-
-                    b.ToTable("CustomHeaders");
-                });
 
             modelBuilder.Entity("DiscordBot.Models.Database.DiscordUser", b =>
                 {

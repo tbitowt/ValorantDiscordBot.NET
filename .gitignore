@@ -7,3 +7,4 @@ riderModule.iml
 .idea
 /.env
 /DiscordBot.sln.DotSettings.user
+/database.db

@@ -21,8 +21,7 @@ namespace DiscordBot
 {
     class Program
     {
-        private DiscordSocketClient _client;
-        
+      
         public static void Main(string[] args)
             => new Program().MainAsync().GetAwaiter().GetResult();
 
@@ -31,7 +30,7 @@ namespace DiscordBot
             DotEnv.AutoConfig();
             using (var db = new DatabaseDbContext())
             {
-                await db.Database.MigrateAsync();
+                db.Database.Migrate();
             }
             using (var services = ConfigureServices())
             {
@@ -44,8 +43,16 @@ namespace DiscordBot
                 }
 
                 var valorantApiService = services.GetService<ValorantApiService>();
+
                 valorantApiService.SetRegion("eu");
+
                 var loginResult = await valorantApiService.Login();
+                var timer = new System.Threading.Timer(
+                    async e => { await valorantApiService.Login(); },
+                    null,
+                    TimeSpan.FromMinutes(30),
+                    TimeSpan.FromMinutes(30));
+
                 
 
 
@@ -58,6 +65,9 @@ namespace DiscordBot
                 // We can read from the environment variable to avoid hardcoding.
                 await client.LoginAsync(TokenType.Bot, envCheckerService.Discord_Token);
                 await client.StartAsync();
+
+                var rankCheckerService = services.GetService<PlayerRankChecker>();
+                rankCheckerService.Start();
 
                 // Here we initialize the logic required to register our commands.
                 await services.GetRequiredService<CommandHandlingService>().InitializeAsync();
@@ -81,6 +91,8 @@ namespace DiscordBot
                 .AddSingleton<EnvReader>()
                 .AddSingleton<EnvCheckerService>()
                 .AddSingleton<ValorantApiService>()
+                .AddSingleton<ExternalApiService>()
+                .AddSingleton<PlayerRankChecker>()
                 .BuildServiceProvider();
         }
     }
