@@ -18,6 +18,8 @@ namespace DiscordBot.Models.Database
 
         public List<RegisteredGuild> RegisteredGuilds { get; } = new List<RegisteredGuild>();
 
+        public List<RankInfo> RankInfos { get; } = new List<RankInfo>();
+
         public void UpdateRank(PlayerRank newRank)
         {
             if (newRank != null)
@@ -27,12 +29,5 @@ namespace DiscordBot.Models.Database
                 RankProgress = newRank.Progress;
             }
         }
-    }
-
-    public class RegisteredGuild
-    {
-        public int RegisteredGuildID { get; set; }
-        public ValorantAccount ValorantAccount { get; set; }
-        public ulong GuildID { get; set; }
     }
 }

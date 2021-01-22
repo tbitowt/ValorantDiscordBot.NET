@@ -33,8 +33,8 @@ namespace DiscordBot.Commands
                     return;
                 }
 
-                var msg = "List of valorant accounts:\n";
-                foreach (var valorantAccount in user.ValorantAccounts)
+                var embed = new EmbedBuilder().WithTitle($"List of {user.Name} accounts");
+                foreach (var valorantAccount in user.ValorantAccounts.OrderByDescending(val => val.Rank).ThenByDescending(val => val.RankProgress))
                 {
                     var playerRank = await ValorantApiService.GetPlayerRank(valorantAccount.Subject);
                     valorantAccount.UpdateRank(playerRank);
@@ -45,13 +45,16 @@ namespace DiscordBot.Commands
                         valorantAccount.DisplayName = $"{playerIDs.Name}#{playerIDs.Tag}";
                     }
 
-                    msg +=
-                        $"{valorantAccount.DisplayName}: {valorantAccount.RankName} ({valorantAccount.RankProgress}/100)\n";
+                    var guildEmote = Context.Guild.Emotes.FirstOrDefault(emote => emote.Name == valorantAccount.RankName.Replace(" ", ""));
+                    embed.AddField("Name", valorantAccount.DisplayName, true);
+                    embed.AddField("Rank", $"{guildEmote?.ToString() ?? ""}{valorantAccount.RankName}", true);
+                    embed.AddField("Progress", $"{valorantAccount.RankProgress} / 100", true);
+
 
                     db.Update(valorantAccount);
                 }
 
-                await Context.Channel.SendMessageAsync(msg);
+                await Context.Channel.SendMessageAsync(embed:embed.Build());
 
                 await db.SaveChangesAsync();
             }

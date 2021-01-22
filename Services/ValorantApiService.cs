@@ -176,5 +176,56 @@ namespace DiscordBot.Services
             Console.WriteLine("GetPlayerIds result is unsuccessful");
             return null;
         }
+
+        public async Task<List<RankInfo>> GetPlayerRankHistoty(ValorantAccount account, DateTime beginDateTime)
+        {
+            _restClient.BaseUrl = GetBasePath();
+            RestRequest request = new RestRequest($"/mmr/v1/players/{account.Subject}/competitiveupdates", Method.GET);
+
+            
+            var result = new List<RankInfo>();
+            int startIndex = 0;
+            do
+            {
+                request.AddOrUpdateParameter("startIndex", startIndex);
+                request.AddOrUpdateParameter("endIndex", startIndex + 20);
+                startIndex += 20;
+                var response = await _restClient.ExecuteAsync<MatchHistory>(request);
+                if (response.IsSuccessful)
+                {
+                    if (response.Data.Matches.Count == 0)
+                    {
+                        break;
+                    }
+
+                    foreach (var dataMatch in response.Data.Matches)
+                    {
+                        var info = new RankInfo()
+                        {
+                            DateTime = DateTimeOffset.FromUnixTimeMilliseconds(dataMatch.MatchStartTime).DateTime,
+                            Progress = (int) dataMatch.RankedRatingAfterUpdate,
+                            RankInt = (int) dataMatch.TierAfterUpdate,
+                            ValorantAccount = account
+                        };
+                        
+                        if (info.DateTime < beginDateTime)
+                            break;
+                        
+                        if(info.Progress == 0 && info.RankInt == 0)
+                            continue;
+
+                        result.Add(info);
+                        
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            } while (true);
+
+
+            return result;
+        }
     }
 }
