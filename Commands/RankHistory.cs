@@ -26,7 +26,7 @@ namespace DiscordBot.Commands
                     return;
                 }
 
-                var playerRankHistoty = await ValorantApiService.GetPlayerRankHistoty(account, DateTime.Today.AddDays(days * -1));
+                var playerRankHistoty = await ValorantApiService.GetPlayerRankHistory(account, DateTime.Today.AddDays(days * -1));
 
                 int numberAdded = 0;
                 foreach (var rankInfo in playerRankHistoty)

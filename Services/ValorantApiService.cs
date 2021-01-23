@@ -1,29 +1,36 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using DiscordBot.Models;
 using DiscordBot.Models.API;
 using DiscordBot.Models.Database;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Polly;
+using Polly.Retry;
 using RestSharp;
 using RestSharp.Serialization.Json;
+using RestSharpPolly;
+using RestSharpPolly.PolicyProviders;
 
 namespace DiscordBot.Services
 {
     public class ValorantApiService : IValorantApiService
     {
         
-        private readonly RestClient _restClient = new();
-        private readonly CookieContainer _cookieContainer = new();
+        private RestClientFactory<IRestResponse> RestClient => RestClientFactory<IRestResponse>.Create(_retryPolicy);
+        private CookieContainer _cookieContainer = new();
         private EnvCheckerService _envCheckerService;
         private string _region;
         public string AccessToken { get; private set; }
         public string EntitlementToken { get; private set; }
+        private AsyncRetryPolicy<IRestResponse> _retryPolicy;
         
         private String[] _rank_map = new String[]
         {
@@ -32,12 +39,16 @@ namespace DiscordBot.Services
             "Platinum 3", "Diamond 1", "Diamond 2", "Diamond 3", "Immortal 1", "Immortal 2", "Immortal 3",
             "Radiant"
         };
-        
+
         public ValorantApiService(EnvCheckerService envCheckerService)
         {
-            _restClient.CookieContainer = _cookieContainer;
-            _restClient.AddHandler("text/plain", new JsonDeserializer());
+            RestClient.CookieContainer = _cookieContainer;
+            RestClient.AddHandler("text/plain", new JsonDeserializer());
+            RestClient.AllowMultipleDefaultParametersWithSameName = false;
+
+
             _envCheckerService = envCheckerService;
+            _retryPolicy = Policy.HandleResult<IRestResponse>(r => r.IsSuccessful == false).RetryAsync(async (result, i) => await Login());
         }
 
         public void SetRegion(string region)
@@ -52,8 +63,7 @@ namespace DiscordBot.Services
 
         private async Task<bool> GetAuthorization()
         {
-            _restClient.BaseUrl = new Uri("https://auth.riotgames.com/api/v1/authorization");
-            RestRequest request = new RestRequest(Method.POST);
+            RestRequest request = new RestRequest("https://auth.riotgames.com/api/v1/authorization", Method.POST);
             var body = new
             {
                 client_id = "play-valorant-web-prod",
@@ -62,7 +72,7 @@ namespace DiscordBot.Services
                 response_type = "token id_token"
             };
             request.AddJsonBody(body);
-            var response = await _restClient.ExecuteAsync(request);
+            var response = await RestClient.ExecuteAsync(request);
             if (response.IsSuccessful == false)
             {
                 Console.WriteLine("GetAuthorization result is unsuccessful");
@@ -72,13 +82,13 @@ namespace DiscordBot.Services
 
         private async Task<bool> GetAccessToken(string username, string password)
         {
-            _restClient.BaseUrl = new Uri("https://auth.riotgames.com/api/v1/authorization");
 
-            RestRequest request = new RestRequest(Method.PUT);
+            RestRequest request = new RestRequest("https://auth.riotgames.com/api/v1/authorization", Method.PUT);
             string body = "{\"type\":\"auth\",\"username\":\"" + username + "\",\"password\":\"" + password + "\"}";
             request.AddJsonBody(body);
+            
+            var result = await RestClient.ExecuteAsync<GetAccessTokenModel>(request);
 
-            var result = await _restClient.ExecuteAsync<GetAccessTokenModel>(request);
             if (result.IsSuccessful)
             {
                 var data = result.Data;
@@ -88,7 +98,7 @@ namespace DiscordBot.Services
                 {
                     var token = tokenMatch.Groups[1].Value;
                     AccessToken = token;
-                    _restClient.AddDefaultHeader("Authorization", $"Bearer {AccessToken}");
+                    RestClient.AddOrUpdateDefaultParameter(new Parameter("Authorization", $"Bearer {AccessToken}", ParameterType.HttpHeader));
                     return true;
                 }
             }
@@ -98,14 +108,14 @@ namespace DiscordBot.Services
 
         private async Task<bool> GetEntitlementToken()
         {
-            _restClient.BaseUrl = new Uri("https://entitlements.auth.riotgames.com/api/token/v1");
-            RestRequest request = new RestRequest(Method.POST);
+            RestRequest request = new RestRequest("https://entitlements.auth.riotgames.com/api/token/v1", Method.POST);
             request.AddJsonBody("{}");
-            var response = await _restClient.ExecuteAsync<GetEntitlementsTokenModel>(request);
+            var response = await RestClient.ExecuteAsync<GetEntitlementsTokenModel>(request);
             if (response.IsSuccessful)
             {
                 EntitlementToken = response.Data.EntitlementsToken;
-                _restClient.AddDefaultHeader("X-Riot-Entitlements-JWT", EntitlementToken);
+                RestClient.AddOrUpdateDefaultParameter(new Parameter("X-Riot-Entitlements-JWT", EntitlementToken, ParameterType.HttpHeader));
+
                 return true;
             }
             Console.WriteLine("GetEntitlementToken result is unsuccessful");
@@ -114,6 +124,18 @@ namespace DiscordBot.Services
         
         public async Task<bool> Login()
         {
+            using (var db = new DatabaseDbContext())
+            {
+                foreach (var customHeader in db.CustomHeaders)
+                {
+                    RestClient.AddOrUpdateDefaultParameter(new Parameter(customHeader.Name, customHeader.Value, ParameterType.HttpHeader));
+                }
+            }
+
+            _cookieContainer = new CookieContainer();
+            RestClient.CookieContainer = _cookieContainer;
+
+
             if (await GetAuthorization() == false)
             {
                 return false;
@@ -128,21 +150,16 @@ namespace DiscordBot.Services
                 return false;
             }
 
-            using (var db = new DatabaseDbContext())
-            {
-                foreach (var customHeader in db.CustomHeaders)
-                {
-                    _restClient.AddDefaultHeader(customHeader.Name, customHeader.Value);
-                }
-            }
+            
             return true;
         }
 
         public async Task<PlayerRank> GetPlayerRank(string playerId)
         {
-            _restClient.BaseUrl = GetBasePath();
-            RestRequest request = new RestRequest($"/mmr/v1/players/{playerId}", Method.GET);
-            var response = await _restClient.ExecuteAsync<GetPlayerMmr>(request);
+            RestRequest request = new RestRequest($"{GetBasePath()}/mmr/v1/players/{playerId}", Method.GET);
+
+            var response = await RestClient.ExecuteAsync<GetPlayerMmr>(request);
+            
             if(response.IsSuccessful)
             {
                 var result = new PlayerRank();
@@ -150,6 +167,14 @@ namespace DiscordBot.Services
                 result.RankString = _rank_map[result.RankInt];
                 result.Progress = response.Data.QueueSkills.Competitive.TierProgress;
                 result.MatchesLeftForRank = response.Data.QueueSkills.Competitive.CurrentSeasonGamesNeededForRating;
+
+                var dataLatestCompetitiveUpdate = response.Data.LatestCompetitiveUpdate;
+                result.LastMatch = new DiscordBot.Models.API.Match()
+                {
+                    MatchStartTime = dataLatestCompetitiveUpdate.MatchStartTime,
+                    TierAfterUpdate = dataLatestCompetitiveUpdate.TierAfterUpdate,
+                    RankedRatingAfterUpdate = dataLatestCompetitiveUpdate.RankedRatingAfterUpdate
+                };
                 return result;
             }
             Console.WriteLine("GetPlayerRank result is unsuccessful");
@@ -158,11 +183,10 @@ namespace DiscordBot.Services
 
         public async Task<ValorantPlayerIds> GetPlayerIds(string playerId)
         {
-            _restClient.BaseUrl = GetBasePath();
-            RestRequest request = new RestRequest("/name-service/v2/players", Method.PUT);
+            RestRequest request = new RestRequest($"{GetBasePath()}/name-service/v2/players", Method.PUT);
             var ids = new string[] {playerId};
             request.AddJsonBody(ids);
-            var result = await _restClient.ExecuteAsync<List<PlayerIDs>>(request);
+            var result = await RestClient.ExecuteAsync<List<PlayerIDs>>(request);
 
             if (result.IsSuccessful)
             {
@@ -177,10 +201,9 @@ namespace DiscordBot.Services
             return null;
         }
 
-        public async Task<List<RankInfo>> GetPlayerRankHistoty(ValorantAccount account, DateTime beginDateTime)
+        public async Task<List<RankInfo>> GetPlayerRankHistory(ValorantAccount account, DateTime beginDateTime)
         {
-            _restClient.BaseUrl = GetBasePath();
-            RestRequest request = new RestRequest($"/mmr/v1/players/{account.Subject}/competitiveupdates", Method.GET);
+            RestRequest request = new RestRequest($"{GetBasePath()}/mmr/v1/players/{account.Subject}/competitiveupdates", Method.GET);
 
             
             var result = new List<RankInfo>();
@@ -190,7 +213,7 @@ namespace DiscordBot.Services
                 request.AddOrUpdateParameter("startIndex", startIndex);
                 request.AddOrUpdateParameter("endIndex", startIndex + 20);
                 startIndex += 20;
-                var response = await _restClient.ExecuteAsync<MatchHistory>(request);
+                var response = await RestClient.ExecuteAsync<MatchHistory>(request);
                 if (response.IsSuccessful)
                 {
                     if (response.Data.Matches.Count == 0)
@@ -220,6 +243,7 @@ namespace DiscordBot.Services
                 }
                 else
                 {
+                    Console.WriteLine("GetPlayerRankHistory result is unsuccessful");
                     break;
                 }
             } while (true);

@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using DiscordBot.Models.API;
 
 namespace DiscordBot.Services
 {
@@ -8,6 +9,7 @@ namespace DiscordBot.Services
         public string RankString { get; set; }
         public int Progress { get; set; }
         public int MatchesLeftForRank { get; set; }
+        public Match LastMatch { get; set; }
     }
 
     public class ValorantPlayerIds

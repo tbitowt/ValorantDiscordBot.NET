@@ -67,6 +67,7 @@ namespace DiscordBot.Services
                                 {
                                     valorantAccount.UpdateRank(playerRank);
                                     db.Update(valorantAccount);
+                                    await db.SaveChangesAsync();
                                 }
                             }
                         }

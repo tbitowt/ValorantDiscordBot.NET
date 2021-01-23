@@ -21,7 +21,7 @@ namespace DiscordBot
 {
     class Program
     {
-      
+        
         public static void Main(string[] args)
             => new Program().MainAsync().GetAwaiter().GetResult();
 
@@ -47,14 +47,6 @@ namespace DiscordBot
                 valorantApiService.SetRegion("eu");
 
                 var loginResult = await valorantApiService.Login();
-                var timer = new System.Threading.Timer(
-                    async e => { await valorantApiService.Login(); },
-                    null,
-                    TimeSpan.FromMinutes(30),
-                    TimeSpan.FromMinutes(30));
-
-                
-
 
                 var client = services.GetRequiredService<DiscordSocketClient>();
 
