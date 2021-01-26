@@ -2,7 +2,7 @@
 {
     public class RegisteredGuild
     {
-        public int RegisteredGuildID { get; set; }
+        public int ID { get; set; }
         public ValorantAccount ValorantAccount { get; set; }
         public ulong GuildID { get; set; }
     }

@@ -1,18 +1,13 @@
 ﻿using System;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
-using Discord;
-using Discord.Commands;
-using Discord.WebSocket;
 using DiscordBot.Models.Database;
 using DiscordBot.Services;
 using dotenv.net;
 using dotenv.net.Utilities;
+using DSharpPlus;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using RestSharp;
+using Serilog;
 
 namespace DiscordBot.Commands
 {
@@ -20,73 +15,63 @@ namespace DiscordBot.Commands
 
 namespace DiscordBot
 {
-    class Program
+    internal class Program
     {
-        
         public static void Main(string[] args)
-            => new Program().MainAsync().GetAwaiter().GetResult();
+        {
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.Console(
+                    outputTemplate:
+                    "[{Timestamp:HH:mm:ss} {Level:u3}] <{SourceContext}>\t{Message:j} {NewLine}{Exception}")
+                .CreateLogger();
+            MainAsync().GetAwaiter().GetResult();
+        }
 
-        public async Task MainAsync()
+
+        private static async Task MainAsync()
         {
             DotEnv.AutoConfig();
-            using (var db = new DatabaseDbContext())
-            {
-                db.Database.Migrate();
-            }
             using (var services = ConfigureServices())
             {
-                var envCheckerService = services.GetService<EnvCheckerService>();
-                
-                var envAvailable = envCheckerService.CheckEnvironmentValues();
-                if (envAvailable == false)
+                var envCheckerService = services.GetRequiredService<EnvCheckerService>();
+                var checkEnvironmentValues = envCheckerService.CheckEnvironmentValues();
+                if (checkEnvironmentValues == false)
                 {
+                    Console.WriteLine("Error: CheckEnvironmentValues ");
                     return;
                 }
 
-                var valorantApiService = services.GetService<ValorantApiService>();
-
+                var valorantApiService = services.GetRequiredService<ValorantApiService>();
                 valorantApiService.SetRegion("eu");
 
-                var loginResult = await valorantApiService.Login();
+                await using (var db = new DatabaseDbContext())
+                {
+                    await db.Database.MigrateAsync();
+                }
 
-                var client = services.GetRequiredService<DiscordSocketClient>();
+                var discord = services.GetRequiredService<BotService>();
+                await discord.StartAsync();
 
-                client.Log += Log;
-                services.GetRequiredService<CommandService>().Log += Log;
 
-                // Tokens should be considered secret data and never hard-coded.
-                // We can read from the environment variable to avoid hardcoding.
-                await client.LoginAsync(TokenType.Bot, envCheckerService.Discord_Token);
-                await client.StartAsync();
+                services.GetRequiredService<PlayerRankChecker>().Start();
 
-                var rankCheckerService = services.GetService<PlayerRankChecker>();
-                rankCheckerService.Start();
 
-                // Here we initialize the logic required to register our commands.
-                await services.GetRequiredService<CommandHandlingService>().InitializeAsync();
-
-                await Task.Delay(Timeout.Infinite);
+                await Task.Delay(-1);
             }
         }
-        
-        private Task Log(LogMessage msg)
-        {
-            Console.WriteLine(msg.ToString());
-            return Task.CompletedTask;
-        }
-        
-        private ServiceProvider ConfigureServices()
+
+        private static ServiceProvider ConfigureServices()
         {
             return new ServiceCollection()
-                .AddSingleton<DiscordSocketClient>()
-                .AddSingleton<CommandService>()
-                .AddSingleton<CommandHandlingService>()
                 .AddSingleton<EnvReader>()
+                .AddSingleton<DiscordClient>()
                 .AddSingleton<EnvCheckerService>()
                 .AddSingleton<ValorantApiService>()
                 .AddSingleton<ExternalApiService>()
                 .AddSingleton<PlayerRankChecker>()
                 .AddSingleton<PlotService>()
+                .AddSingleton<BotService>()
+                .AddLogging(c => c.AddSerilog())
                 .BuildServiceProvider();
         }
     }

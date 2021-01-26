@@ -15,13 +15,9 @@ namespace DiscordBot
             {
                 var key = context.GetKey(entity);
                 if (key == null)
-                {
                     context.Set<T>().Add(entity);
-                }
                 else
-                {
                     context.Set<T>().Update(entity);
-                }
             }
             else
             {
@@ -37,26 +33,34 @@ namespace DiscordBot
             return entity.GetType().GetProperty(keyName).GetValue(entity, null);
         }
 
-        public static async Task<IRestResponse> ExecuteTaskAsyncWithPolicy(this IRestClient client, IRestRequest request, CancellationToken cancellationToken, AsyncPolicy<IRestResponse> policy)
+        public static async Task<IRestResponse> ExecuteTaskAsyncWithPolicy(this IRestClient client,
+            IRestRequest request, CancellationToken cancellationToken, AsyncPolicy<IRestResponse> policy)
         {
-            var policyResult = await policy.ExecuteAndCaptureAsync(ct => client.ExecuteTaskAsync(request, ct), cancellationToken);
+            var policyResult =
+                await policy.ExecuteAndCaptureAsync(ct => client.ExecuteTaskAsync(request, ct), cancellationToken);
 
-            return (policyResult.Outcome == OutcomeType.Successful) ? policyResult.Result : new RestResponse
-            {
-                Request = request,
-                ErrorException = policyResult.FinalException
-            };
+            return policyResult.Outcome == OutcomeType.Successful
+                ? policyResult.Result
+                : new RestResponse
+                {
+                    Request = request,
+                    ErrorException = policyResult.FinalException
+                };
         }
 
-        public static async Task<IRestResponse<T>> ExecuteTaskAsyncWithPolicy<T>(this IRestClient client, IRestRequest request, CancellationToken cancellationToken, AsyncPolicy<IRestResponse<T>> policy)
+        public static async Task<IRestResponse<T>> ExecuteTaskAsyncWithPolicy<T>(this IRestClient client,
+            IRestRequest request, CancellationToken cancellationToken, AsyncPolicy<IRestResponse<T>> policy)
         {
-            var policyResult = await policy.ExecuteAndCaptureAsync(ct => client.ExecuteTaskAsync<T>(request, ct), cancellationToken);
+            var policyResult =
+                await policy.ExecuteAndCaptureAsync(ct => client.ExecuteTaskAsync<T>(request, ct), cancellationToken);
 
-            return (policyResult.Outcome == OutcomeType.Successful) ? policyResult.Result : new RestResponse<T>
-            {
-                Request = request,
-                ErrorException = policyResult.FinalException
-            };
+            return policyResult.Outcome == OutcomeType.Successful
+                ? policyResult.Result
+                : new RestResponse<T>
+                {
+                    Request = request,
+                    ErrorException = policyResult.FinalException
+                };
         }
     }
 }

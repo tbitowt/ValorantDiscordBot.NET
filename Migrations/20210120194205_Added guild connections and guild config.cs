@@ -7,24 +7,21 @@ namespace DiscordBot.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "GuildConfigs",
-                columns: table => new
+                "GuildConfigs",
+                table => new
                 {
-                    Guild = table.Column<ulong>(type: "INTEGER", nullable: false)
+                    Guild = table.Column<ulong>("INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    UpdatesChannel = table.Column<ulong>(type: "INTEGER", nullable: false),
-                    EnableDebug = table.Column<bool>(type: "INTEGER", nullable: false)
+                    UpdatesChannel = table.Column<ulong>("INTEGER", nullable: false),
+                    EnableDebug = table.Column<bool>("INTEGER", nullable: false)
                 },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_GuildConfigs", x => x.Guild);
-                });
+                constraints: table => { table.PrimaryKey("PK_GuildConfigs", x => x.Guild); });
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "GuildConfigs");
+                "GuildConfigs");
         }
     }
 }

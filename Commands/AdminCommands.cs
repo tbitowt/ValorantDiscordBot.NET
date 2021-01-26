@@ -1,55 +1,54 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Net.WebSockets;
-using System.Threading.Tasks;
-using CoreHtmlToImage;
-using Discord;
-using Discord.Commands;
-using Discord.WebSocket;
-using DiscordBot.Extensions.CommandExtensions;
+﻿using System.Threading.Tasks;
 using DiscordBot.Models.Database;
 using DiscordBot.Services;
-using Microsoft.EntityFrameworkCore;
+using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace DiscordBot.Commands
 {
-    public class AdminCommands : ModuleBase<SocketCommandContext>
+    public class AdminCommands : LoggerCommandModule
     {
-        public ValorantApiService ValorantApiService { get; set; }
-        private IDiscordClient _client;
-        [RequireOwner]
-        [Summary("Prints API tokens")]
-        [Command("tokens")]
-        [Hidden]
-        public async Task TokensCommand()
+        public AdminCommands(ILoggerFactory loggerFactory) : base(loggerFactory)
         {
-            // We can also access the channel from the Command Context.
-            await Context.Channel.SendMessageAsync($"AccessToken: \n{ValorantApiService.AccessToken}\n\n\nEntitlementToken: \n{ValorantApiService.EntitlementToken}");
         }
 
+        public ValorantApiService ValorantApiService { get; set; }
+
+        [Hidden]
         [RequireOwner]
-        [Summary("Sets channel for rank updates")]
+        [Command("tokens")]
+        public async Task TokensCommand(CommandContext ctx)
+        {
+            Logger.LogInformation("tttt");
+            // We can also access the channel from the Command Context.
+            await ctx.Channel.SendMessageAsync(
+                $"AccessToken: \n{ValorantApiService.AccessToken}\n\n\nEntitlementToken: \n{ValorantApiService.EntitlementToken}");
+        }
+
+        [Hidden]
+        [RequireOwner]
         [Command("setUpdatesChannel")]
-        public async Task SetUpdateChannelCommand([Summary("Channel to be set")]IChannel channel)
+        public async Task SetUpdateChannelCommand(CommandContext ctx, DiscordChannel channel)
         {
             // We can also access the channel from the Command Context.
             using (var db = new DatabaseDbContext())
             {
-                var guildConfig = new GuildConfig() { Guild = Context.Guild.Id, UpdatesChannel = channel.Id };
+                var guildConfig = new GuildConfig {Guild = ctx.Guild.Id, UpdatesChannel = channel.Id};
                 db.AddOrUpdate(guildConfig);
                 await db.SaveChangesAsync();
             }
         }
 
+        [Hidden]
         [RequireOwner]
-        [Summary("Sets a required headers to Valorant API calls")]
         [Command("setHeader")]
-        public async Task SetHeaderCommand(string headerName, [Remainder] string headerValue)
+        public async Task SetHeaderCommand(CommandContext ctx, string headerName, [RemainingText] string headerValue)
         {
             using (var db = new DatabaseDbContext())
             {
-                var customHeader = new CustomHeader() {Name = headerName, Value = headerValue};
+                var customHeader = new CustomHeader {Name = headerName, Value = headerValue};
                 db.AddOrUpdate(customHeader);
                 await db.SaveChangesAsync();
             }

@@ -8,37 +8,37 @@ namespace DiscordBot.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "RankInfo",
-                columns: table => new
+                "RankInfo",
+                table => new
                 {
-                    RankInfoId = table.Column<int>(type: "INTEGER", nullable: false)
+                    RankInfoId = table.Column<int>("INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    ValorantAccountId = table.Column<int>(type: "INTEGER", nullable: true),
-                    RankInt = table.Column<int>(type: "INTEGER", nullable: false),
-                    Progress = table.Column<int>(type: "INTEGER", nullable: false),
-                    DateTime = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    ValorantAccountId = table.Column<int>("INTEGER", nullable: true),
+                    RankInt = table.Column<int>("INTEGER", nullable: false),
+                    Progress = table.Column<int>("INTEGER", nullable: false),
+                    DateTime = table.Column<DateTime>("TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_RankInfo", x => x.RankInfoId);
                     table.ForeignKey(
-                        name: "FK_RankInfo_ValorantAccount_ValorantAccountId",
-                        column: x => x.ValorantAccountId,
-                        principalTable: "ValorantAccount",
-                        principalColumn: "ValorantAccountId",
+                        "FK_RankInfo_ValorantAccount_ValorantAccountId",
+                        x => x.ValorantAccountId,
+                        "ValorantAccount",
+                        "ValorantAccountId",
                         onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_RankInfo_ValorantAccountId",
-                table: "RankInfo",
-                column: "ValorantAccountId");
+                "IX_RankInfo_ValorantAccountId",
+                "RankInfo",
+                "ValorantAccountId");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "RankInfo");
+                "RankInfo");
         }
     }
 }

@@ -2,8 +2,7 @@
 
 namespace DiscordBot.Models.API
 {
-
-    public partial class GetPlayerMmr
+    public class GetPlayerMmr
     {
         public long Version { get; set; }
         public string Subject { get; set; }
@@ -13,7 +12,7 @@ namespace DiscordBot.Models.API
         public bool IsLeaderboardAnonymized { get; set; }
     }
 
-    public partial class LatestCompetitiveUpdate
+    public class LatestCompetitiveUpdate
     {
         public string MatchId { get; set; }
         public string MapId { get; set; }
@@ -26,7 +25,7 @@ namespace DiscordBot.Models.API
         public string CompetitiveMovement { get; set; }
     }
 
-    public partial class QueueSkills
+    public class QueueSkills
     {
         public Competitive Competitive { get; set; }
         public Custom Custom { get; set; }
@@ -37,7 +36,7 @@ namespace DiscordBot.Models.API
         public Competitive Unrated { get; set; }
     }
 
-    public partial class Competitive
+    public class Competitive
     {
         public int CompetitiveTier { get; set; }
         public int TierProgress { get; set; }
@@ -48,7 +47,7 @@ namespace DiscordBot.Models.API
         public Dictionary<string, SeasonalInfoBySeasonId> SeasonalInfoBySeasonId { get; set; }
     }
 
-    public partial class SeasonalInfoBySeasonId
+    public class SeasonalInfoBySeasonId
     {
         public string SeasonId { get; set; }
         public int NumberOfWins { get; set; }
@@ -59,7 +58,7 @@ namespace DiscordBot.Models.API
         public int LeaderboardRank { get; set; }
     }
 
-    public partial class Custom
+    public class Custom
     {
         public int CompetitiveTier { get; set; }
         public int TierProgress { get; set; }
@@ -70,13 +69,13 @@ namespace DiscordBot.Models.API
         public CustomSeasonalInfoBySeasonId SeasonalInfoBySeasonId { get; set; }
     }
 
-    public partial class CustomSeasonalInfoBySeasonId
+    public class CustomSeasonalInfoBySeasonId
     {
         public SeasonalInfoBySeasonId Empty { get; set; }
         public SeasonalInfoBySeasonId The3F61C7724560Cd3F5D3FA7Ab5Abda6B3 { get; set; }
     }
 
-    public partial class Seeding
+    public class Seeding
     {
         public int CompetitiveTier { get; set; }
         public int TierProgress { get; set; }
@@ -87,11 +86,11 @@ namespace DiscordBot.Models.API
         public SeedingSeasonalInfoBySeasonId SeasonalInfoBySeasonId { get; set; }
     }
 
-    public partial class SeedingSeasonalInfoBySeasonId
+    public class SeedingSeasonalInfoBySeasonId
     {
     }
 
-    public partial class Snowball
+    public class Snowball
     {
         public int CompetitiveTier { get; set; }
         public int TierProgress { get; set; }
@@ -102,7 +101,7 @@ namespace DiscordBot.Models.API
         public SnowballSeasonalInfoBySeasonId SeasonalInfoBySeasonId { get; set; }
     }
 
-    public partial class SnowballSeasonalInfoBySeasonId
+    public class SnowballSeasonalInfoBySeasonId
     {
         public SeasonalInfoBySeasonId The46Ea6166457311289Cea60A15640059B { get; set; }
     }

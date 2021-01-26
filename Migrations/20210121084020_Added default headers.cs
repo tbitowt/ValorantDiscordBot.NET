@@ -7,22 +7,19 @@ namespace DiscordBot.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "CustomHeaders",
-                columns: table => new
+                "CustomHeaders",
+                table => new
                 {
-                    Name = table.Column<string>(type: "TEXT", nullable: false),
-                    Value = table.Column<string>(type: "TEXT", nullable: true)
+                    Name = table.Column<string>("TEXT", nullable: false),
+                    Value = table.Column<string>("TEXT", nullable: true)
                 },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_CustomHeaders", x => x.Name);
-                });
+                constraints: table => { table.PrimaryKey("PK_CustomHeaders", x => x.Name); });
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "CustomHeaders");
+                "CustomHeaders");
         }
     }
 }

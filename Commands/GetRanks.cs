@@ -1,65 +1,69 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using Discord;
-using Discord.Commands;
 using DiscordBot.Models.Database;
 using DiscordBot.Services;
+using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace DiscordBot.Commands
 {
-    public class GetRanks : ModuleBase<SocketCommandContext>
+    public class GetRanks : LoggerCommandModule
     {
+        public GetRanks(ILoggerFactory loggerFactory) : base(loggerFactory)
+        {
+        }
+
         public ValorantApiService ValorantApiService { get; set; }
         public PlotService PlotService { get; set; }
-        
-        
+
+
         [Command("rank")]
-        [Summary("Prints rank of all accounts connected to a selected discord user")]
-        public async Task RankCommand([Summary("if empty, current user would be selected")][Name("DiscordUser")]IUser discordUser = null)
+        public async Task RankCommand(CommandContext ctx, DiscordUser discordUser = null)
         {
-            discordUser ??= Context.User;
+            discordUser ??= ctx.User;
 
             using (var db = new DatabaseDbContext())
             {
                 var user = await db.DiscordUsers.Include(user => user.ValorantAccounts)
-                    .FirstOrDefaultAsync(user => user.DiscordUserId == discordUser.Id);
+                    .FirstOrDefaultAsync(user => user.ID == discordUser.Id);
 
                 if (user == null || user.ValorantAccounts.Count == 0)
                 {
-                    await Context.Channel.SendMessageAsync("You have no connected accounts");
+                    await ctx.Channel.SendMessageAsync("You have no connected accounts");
                     return;
                 }
 
-                var embed = new EmbedBuilder().WithTitle($"List of {user.Name} accounts");
-                foreach (var valorantAccount in user.ValorantAccounts.OrderByDescending(val => val.Rank).ThenByDescending(val => val.RankProgress))
+                var embed = new DiscordEmbedBuilder().WithTitle($"List of {user.Name} accounts");
+                foreach (var valorantAccount in user.ValorantAccounts.OrderByDescending(val => val.Rank)
+                    .ThenByDescending(val => val.RankProgress))
                 {
                     var playerRank = await ValorantApiService.GetPlayerRank(valorantAccount.Subject);
                     valorantAccount.UpdateRank(playerRank);
 
                     var playerIDs = await ValorantApiService.GetPlayerIds(valorantAccount.Subject);
-                    if (playerIDs != null)
-                    {
-                        valorantAccount.DisplayName = $"{playerIDs.Name}#{playerIDs.Tag}";
-                    }
+                    if (playerIDs != null) valorantAccount.DisplayName = $"{playerIDs.Name}#{playerIDs.Tag}";
 
-                    var guildEmote = Context.Guild.Emotes.FirstOrDefault(emote => emote.Name == valorantAccount.RankName.Replace(" ", ""));
+                    var guildEmote = ctx.Guild.Emojis.FirstOrDefault(emote =>
+                        emote.Value.Name == valorantAccount.RankName.Replace(" ", ""));
                     embed.AddField("Name", valorantAccount.DisplayName, true);
-                    embed.AddField("Rank", $"{guildEmote?.ToString() ?? ""}{valorantAccount.RankName}", true);
+                    embed.AddField("Rank", $"{guildEmote.Value}{valorantAccount.RankName}", true); //todo: add emoji
                     embed.AddField("Progress", $"{valorantAccount.RankProgress} / 100", true);
 
 
                     db.Update(valorantAccount);
                 }
 
-                await Context.Channel.SendMessageAsync(embed:embed.Build());
+                await ctx.Channel.SendMessageAsync(embed: embed.Build());
 
                 await db.SaveChangesAsync();
             }
         }
 
         [Command("history")]
-        public async Task HistoryCommand(string accountName)
+        public async Task HistoryCommand(CommandContext ctx, string accountName)
         {
             using (var db = new DatabaseDbContext())
             {
@@ -67,20 +71,18 @@ namespace DiscordBot.Commands
                     .FirstOrDefaultAsync(acc => acc.DisplayName == accountName);
 
                 if (account == null)
-                {
-                    await Context.Channel.SendMessageAsync(
+                    await ctx.Channel.SendMessageAsync(
                         "No account with specified ID found. You must specify valorant account name");
-                }
 
-                if (account.RankInfos.Count == 0)
-                {
-                    
-                }
-                else
-                
+                if (account.RankInfos.Count != 0)
                 {
                     var historyPlot = PlotService.GetHistoryPlot(account);
-                    await Context.Channel.SendFileAsync(historyPlot, "history.png");
+                    // await ctx.Channel.SendFileAsync(historyPlot, "history.png"); // todo: Add sending plot
+                    await ctx.Channel.SendFileAsync("history.png", historyPlot);
+                }
+                else
+                {
+                    await ctx.Channel.SendMessageAsync($"No history entries for {accountName}");
                 }
             }
         }

@@ -7,48 +7,48 @@ namespace DiscordBot.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterColumn<ulong>(
-                name: "UpdatesChannel",
-                table: "GuildConfigs",
-                type: "INTEGER",
+                "UpdatesChannel",
+                "GuildConfigs",
+                "INTEGER",
                 nullable: true,
                 oldClrType: typeof(ulong),
                 oldType: "INTEGER");
 
             migrationBuilder.CreateTable(
-                name: "RegisteredGuild",
-                columns: table => new
+                "RegisteredGuild",
+                table => new
                 {
-                    RegisteredGuildID = table.Column<int>(type: "INTEGER", nullable: false)
+                    RegisteredGuildID = table.Column<int>("INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    ValorantAccountId = table.Column<int>(type: "INTEGER", nullable: true),
-                    GuildID = table.Column<ulong>(type: "INTEGER", nullable: false)
+                    ValorantAccountId = table.Column<int>("INTEGER", nullable: true),
+                    GuildID = table.Column<ulong>("INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_RegisteredGuild", x => x.RegisteredGuildID);
                     table.ForeignKey(
-                        name: "FK_RegisteredGuild_ValorantAccount_ValorantAccountId",
-                        column: x => x.ValorantAccountId,
-                        principalTable: "ValorantAccount",
-                        principalColumn: "ValorantAccountId",
+                        "FK_RegisteredGuild_ValorantAccount_ValorantAccountId",
+                        x => x.ValorantAccountId,
+                        "ValorantAccount",
+                        "ValorantAccountId",
                         onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_RegisteredGuild_ValorantAccountId",
-                table: "RegisteredGuild",
-                column: "ValorantAccountId");
+                "IX_RegisteredGuild_ValorantAccountId",
+                "RegisteredGuild",
+                "ValorantAccountId");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "RegisteredGuild");
+                "RegisteredGuild");
 
             migrationBuilder.AlterColumn<ulong>(
-                name: "UpdatesChannel",
-                table: "GuildConfigs",
-                type: "INTEGER",
+                "UpdatesChannel",
+                "GuildConfigs",
+                "INTEGER",
                 nullable: false,
                 defaultValue: 0ul,
                 oldClrType: typeof(ulong),

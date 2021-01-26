@@ -7,17 +7,17 @@ namespace DiscordBot.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropPrimaryKey(
-                name: "PK_ValorantAccount",
-                table: "ValorantAccount");
+                "PK_ValorantAccount",
+                "ValorantAccount");
 
             migrationBuilder.DropColumn(
-                name: "ValorantAccountId",
-                table: "ValorantAccount");
+                "ValorantAccountId",
+                "ValorantAccount");
 
             migrationBuilder.AlterColumn<string>(
-                name: "Subject",
-                table: "ValorantAccount",
-                type: "TEXT",
+                "Subject",
+                "ValorantAccount",
+                "TEXT",
                 nullable: false,
                 defaultValue: "",
                 oldClrType: typeof(string),
@@ -25,37 +25,37 @@ namespace DiscordBot.Migrations
                 oldNullable: true);
 
             migrationBuilder.AddPrimaryKey(
-                name: "PK_ValorantAccount",
-                table: "ValorantAccount",
-                column: "Subject");
+                "PK_ValorantAccount",
+                "ValorantAccount",
+                "Subject");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropPrimaryKey(
-                name: "PK_ValorantAccount",
-                table: "ValorantAccount");
+                "PK_ValorantAccount",
+                "ValorantAccount");
 
             migrationBuilder.AlterColumn<string>(
-                name: "Subject",
-                table: "ValorantAccount",
-                type: "TEXT",
+                "Subject",
+                "ValorantAccount",
+                "TEXT",
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT");
 
             migrationBuilder.AddColumn<int>(
-                name: "ValorantAccountId",
-                table: "ValorantAccount",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: 0)
+                    "ValorantAccountId",
+                    "ValorantAccount",
+                    "INTEGER",
+                    nullable: false,
+                    defaultValue: 0)
                 .Annotation("Sqlite:Autoincrement", true);
 
             migrationBuilder.AddPrimaryKey(
-                name: "PK_ValorantAccount",
-                table: "ValorantAccount",
-                column: "ValorantAccountId");
+                "PK_ValorantAccount",
+                "ValorantAccount",
+                "ValorantAccountId");
         }
     }
 }

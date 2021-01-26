@@ -1,5 +1,6 @@
 ﻿using System;
 using dotenv.net.Utilities;
+using Emzi0767.Utilities;
 
 namespace DiscordBot.Services
 {
@@ -7,19 +8,21 @@ namespace DiscordBot.Services
     {
         private readonly EnvReader _reader;
 
-        public string Valorant_UserName { get; private set; }
-        public string Valorant_Password { get; private set; }
-        public string Discord_Token { get; private set; }
-        public string Bot_Prefix { get; private set; }
-
         public EnvCheckerService(EnvReader reader)
         {
             _reader = reader;
         }
 
+        public string Valorant_UserName { get; private set; }
+        public string Valorant_Password { get; private set; }
+        public string Discord_Token { get; private set; }
+        public string Bot_Prefix { get; private set; }
+
         public bool CheckEnvironmentValues()
         {
-            bool result = true;
+            var readOnlyDictionary = _reader.ToDictionary();
+
+            var result = true;
 
             try
             {
@@ -29,7 +32,7 @@ namespace DiscordBot.Services
             {
                 result = false;
             }
-            
+
             try
             {
                 Valorant_Password = GetValue("VALORANT_PASSWORD");
@@ -38,7 +41,7 @@ namespace DiscordBot.Services
             {
                 result = false;
             }
-            
+
             try
             {
                 Discord_Token = GetValue("DISCORD_TOKEN");
@@ -70,13 +73,12 @@ namespace DiscordBot.Services
                     Console.WriteLine($"Found default value of {variable} data in .env file");
                     throw new ArgumentException($"Found default value of {variable} data in .env file");
                 }
+
                 return value;
             }
-            else
-            {
-                Console.WriteLine($"Cannot read {variable} data from .env file");
-                throw new ArgumentException($"Found default value of {variable} data in .env file");
-            }
+
+            Console.WriteLine($"Cannot read {variable} data from .env file");
+            throw new ArgumentException($"Found default value of {variable} data in .env file");
         }
     }
 }

@@ -2,15 +2,14 @@
 
 namespace DiscordBot.Models.API
 {
-
-    public partial class MatchHistory
+    public class MatchHistory
     {
         public long Version { get; set; }
         public string Subject { get; set; }
         public List<Match> Matches { get; set; }
     }
 
-    public partial class Match
+    public class Match
     {
         public string MatchId { get; set; }
         public string MapId { get; set; }

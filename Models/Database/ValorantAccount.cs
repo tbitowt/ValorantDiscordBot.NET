@@ -6,19 +6,19 @@ namespace DiscordBot.Models.Database
 {
     public class ValorantAccount
     {
-        [Key]
-        public int ValorantAccountId { get; set; }
+        [Key] public int ID { get; set; }
+
         public string Subject { get; set; }
         public string DisplayName { get; set; }
 
         public int Rank { get; set; }
         public string RankName { get; set; }
         public int RankProgress { get; set; }
-        public DiscordUser DiscordUser { get; set; }
+        public DbDiscordUser DbDiscordUser { get; set; }
 
-        public List<RegisteredGuild> RegisteredGuilds { get; } = new List<RegisteredGuild>();
+        public List<RegisteredGuild> RegisteredGuilds { get; } = new();
 
-        public List<RankInfo> RankInfos { get; } = new List<RankInfo>();
+        public List<RankInfo> RankInfos { get; } = new();
 
         public void UpdateRank(PlayerRank newRank)
         {

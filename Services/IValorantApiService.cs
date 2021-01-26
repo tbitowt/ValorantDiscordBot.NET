@@ -17,9 +17,9 @@ namespace DiscordBot.Services
         public string Name { get; set; }
         public string Tag { get; set; }
     }
+
     public interface IValorantApiService
     {
-        
         string AccessToken { get; }
         string EntitlementToken { get; }
         Task<bool> Login();

@@ -1,146 +1,144 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Discord;
-using Discord.Commands;
-using Discord.WebSocket;
 using DiscordBot.Models.Database;
 using DiscordBot.Services;
+using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Entities;
 using Microsoft.EntityFrameworkCore;
-using ScottPlot.Config.DateTimeTickUnits;
 
 namespace DiscordBot.Commands
 {
-    public class LinkingCommands: ModuleBase<SocketCommandContext>
+    public class LinkingCommands : BaseCommandModule
     {
         public ValorantApiService ValorantApiService { get; set; }
         public ExternalApiService ExternalApiService { get; set; }
-        
+
+        [Description("aaa")]
         [Command("link")]
-        public async Task LinkCommand(IUser user, [Remainder]string subject)
+        public async Task LinkCommand(CommandContext ctx, DiscordUser user, [RemainingText] string subject)
         {
-            await Context.Channel.TriggerTypingAsync();
+            await ctx.TriggerTypingAsync();
             if (subject.Contains('#'))
             {
                 var strings = subject.Split('#');
 
                 subject = await ExternalApiService.GetPlayerPuuid(strings[0], strings[1]);
-
             }
-            var socketUser = user as SocketUser;
-            
-            await LinkAccount(socketUser, subject);
+
+
+            await LinkAccount(ctx, user, subject);
         }
 
+        [Description("bbb")]
         [Command("link")]
-        public async Task LinkCommand([Remainder] string subject)
+        public async Task LinkCommand(CommandContext ctx, [RemainingText] string subject)
         {
-            await Context.Channel.TriggerTypingAsync();
+            await ctx.Channel.TriggerTypingAsync();
             if (subject.Contains('#'))
             {
                 var strings = subject.Split('#');
 
                 subject = await ExternalApiService.GetPlayerPuuid(strings[0], strings[1]);
-
             }
-            
-            await LinkAccount(Context.User, subject);
+
+            await LinkAccount(ctx, ctx.User, subject);
         }
 
         [Command("unlink")]
-        public async Task UnlinkCommand(string subject)
+        public async Task UnlinkCommand(CommandContext ctx, string subject)
         {
-            await Context.Channel.TriggerTypingAsync();
-            await UnlinkAccount(Context.User, subject);
+            await ctx.Channel.TriggerTypingAsync();
+            await UnlinkAccount(ctx, ctx.User, subject);
         }
-        
+
         [Command("unlink")]
-        public async Task UnlinkCommand(IUser user, string subject)
+        public async Task UnlinkCommand(CommandContext ctx, DiscordUser user, string subject)
         {
-            await Context.Channel.TriggerTypingAsync();
-            var socketUser = user as SocketUser;
-            await UnlinkAccount(socketUser, subject);
+            await ctx.Channel.TriggerTypingAsync();
+            await UnlinkAccount(ctx, user, subject);
         }
-        
+
         [Command("unlink")]
-        public async Task UnlinkCommand()
+        public async Task UnlinkCommand(CommandContext ctx)
         {
-            await Context.Channel.TriggerTypingAsync();
+            await ctx.Channel.TriggerTypingAsync();
             using (var db = new DatabaseDbContext())
             {
-                var user = db.DiscordUsers.Include(user => user.ValorantAccounts).SingleOrDefault(user => user.DiscordUserId == Context.User.Id);
+                var user = db.DiscordUsers.Include(user => user.ValorantAccounts)
+                    .SingleOrDefault(user => user.ID == ctx.User.Id);
                 if (user == null || user.ValorantAccounts.Count == 0)
                 {
-                    await Context.Channel.SendMessageAsync($"User does not have assigned valorant accounts");
+                    await ctx.Channel.SendMessageAsync("User does not have assigned valorant accounts");
                 }
                 else
                 {
                     var msg = "Assigned accounts:\n";
                     foreach (var valorantAccount in user.ValorantAccounts)
-                    {
                         msg += $"`{valorantAccount.Subject}\t:\t{valorantAccount.DisplayName}`\n";
-                    }
-                    await Context.Channel.SendMessageAsync(msg);
+                    await ctx.Channel.SendMessageAsync(msg);
                 }
             }
         }
 
-        private async Task UnlinkAccount(SocketUser discordUser, string subject)
+        private async Task UnlinkAccount(CommandContext ctx, DiscordUser dbDiscordUser, string subject)
         {
             using (var db = new DatabaseDbContext())
             {
                 var user = db.DiscordUsers.Include(user => user.ValorantAccounts)
-                    .SingleOrDefault(user => user.DiscordUserId == discordUser.Id);
+                    .SingleOrDefault(user => user.ID == dbDiscordUser.Id);
 
                 var acc = user?.ValorantAccounts.FirstOrDefault(acc => acc.Subject == subject);
                 if (acc != null)
                 {
                     user.ValorantAccounts.Remove(acc);
-                    await Context.Channel.SendMessageAsync($"Account {acc.DisplayName} unlinked from the user");
+                    await ctx.Channel.SendMessageAsync($"Account {acc.DisplayName} unlinked from the user");
                 }
                 else
                 {
-                    await Context.Channel.SendMessageAsync($"The user does not have assigned requested account");
+                    await ctx.Channel.SendMessageAsync("The user does not have assigned requested account");
                 }
             }
         }
-        
-        private async Task LinkAccount(SocketUser discordUser, string subject)
+
+        private async Task LinkAccount(CommandContext ctx, DiscordUser discordUser, string subject)
         {
             using (var db = new DatabaseDbContext())
             {
                 var playerRank = await ValorantApiService.GetPlayerRank(subject);
                 if (playerRank == null)
                 {
-                    await Context.Channel.SendMessageAsync("Could not retrieve Player rank for selected id");
+                    await ctx.Channel.SendMessageAsync("Could not retrieve Player rank for selected id");
                     return;
                 }
 
-                var valorantAccount = new ValorantAccount()
+                var valorantAccount = new ValorantAccount
                 {
                     Subject = subject,
                     Rank = playerRank.RankInt,
                     RankName = playerRank.RankString,
                     RankProgress = playerRank.Progress
                 };
-                
+
                 var playerIDs = await ValorantApiService.GetPlayerIds(subject);
                 if (playerIDs == null)
                 {
-                    await Context.Channel.SendMessageAsync("Could not retrieve Player IDs for selected id");
+                    await ctx.Channel.SendMessageAsync("Could not retrieve Player IDs for selected id");
                     return;
                 }
 
                 valorantAccount.DisplayName = $"{playerIDs.Name}#{playerIDs.Tag}";
 
                 var user = db.DiscordUsers.Include(user => user.ValorantAccounts)
-                    .SingleOrDefault(user => user.DiscordUserId == discordUser.Id);
+                    .SingleOrDefault(user => user.ID == discordUser.Id);
                 if (user == null)
                 {
-                    user = new DiscordUser() {Name = discordUser.Username, DiscordUserId = discordUser.Id};
+                    user = new DbDiscordUser {Name = discordUser.Username, ID = discordUser.Id};
                     user.ValorantAccounts.Add(valorantAccount);
                     await db.DiscordUsers.AddAsync(user);
-                    await Context.Channel.SendMessageAsync($"Account {valorantAccount.DisplayName} ( {valorantAccount.RankName} )  lined to user {user.Name}");
+                    await ctx.Channel.SendMessageAsync(
+                        $"Account {valorantAccount.DisplayName} ( {valorantAccount.RankName} )  lined to user {user.Name}");
                 }
 
                 else
@@ -149,7 +147,8 @@ namespace DiscordBot.Commands
                     if (valorantAccount == null)
                     {
                         user.ValorantAccounts.Add(valorantAccount);
-                        await Context.Channel.SendMessageAsync($"Account {valorantAccount.DisplayName} ( {valorantAccount.RankName} ) lined to user {user.Name}");
+                        await ctx.Channel.SendMessageAsync(
+                            $"Account {valorantAccount.DisplayName} ( {valorantAccount.RankName} ) lined to user {user.Name}");
                     }
                     else
                     {
@@ -158,25 +157,26 @@ namespace DiscordBot.Commands
                         valorantAccount.RankName = valorantAccount.RankName;
                         valorantAccount.RankProgress = valorantAccount.RankProgress;
                         db.Update(valorantAccount);
-                        await Context.Channel.SendMessageAsync($"Account {valorantAccount.DisplayName} ( {valorantAccount.RankName} ) already linked to user {user.Name}");
+                        await ctx.Channel.SendMessageAsync(
+                            $"Account {valorantAccount.DisplayName} ( {valorantAccount.RankName} ) already linked to user {user.Name}");
                     }
                 }
 
-                if (valorantAccount.RegisteredGuilds.Any(guild => guild.GuildID == Context.Guild.Id) == false)
+                if (valorantAccount.RegisteredGuilds.Any(guild => guild.GuildID == ctx.Guild.Id) == false)
                 {
-                    valorantAccount.RegisteredGuilds.Add(new RegisteredGuild(){GuildID = Context.Guild.Id, ValorantAccount = valorantAccount});
+                    valorantAccount.RegisteredGuilds.Add(new RegisteredGuild
+                        {GuildID = ctx.Guild.Id, ValorantAccount = valorantAccount});
                     db.Update(valorantAccount);
                 }
 
                 await db.SaveChangesAsync();
-                var playerRankHistoty = await ValorantApiService.GetPlayerRankHistory(valorantAccount, DateTime.Today.AddDays(-50));
-                
+                var playerRankHistoty =
+                    await ValorantApiService.GetPlayerRankHistory(valorantAccount, DateTime.Today.AddDays(-50));
+
                 foreach (var rankInfo in playerRankHistoty)
                 {
                     if (valorantAccount.RankInfos.Any(info => info.DateTime == rankInfo.DateTime) == false)
-                    {
                         valorantAccount.RankInfos.Add(rankInfo);
-                    }
 
                     db.Update(valorantAccount);
                 }
