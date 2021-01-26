@@ -7,6 +7,7 @@ using CoreHtmlToImage;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using DiscordBot.Extensions.CommandExtensions;
 using DiscordBot.Models.Database;
 using DiscordBot.Services;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,9 @@ namespace DiscordBot.Commands
         public ValorantApiService ValorantApiService { get; set; }
         private IDiscordClient _client;
         [RequireOwner]
+        [Summary("Prints API tokens")]
         [Command("tokens")]
+        [Hidden]
         public async Task TokensCommand()
         {
             // We can also access the channel from the Command Context.
@@ -26,8 +29,9 @@ namespace DiscordBot.Commands
         }
 
         [RequireOwner]
+        [Summary("Sets channel for rank updates")]
         [Command("setUpdatesChannel")]
-        public async Task SetUpdateChannelCommand(IChannel channel)
+        public async Task SetUpdateChannelCommand([Summary("Channel to be set")]IChannel channel)
         {
             // We can also access the channel from the Command Context.
             using (var db = new DatabaseDbContext())
@@ -39,6 +43,7 @@ namespace DiscordBot.Commands
         }
 
         [RequireOwner]
+        [Summary("Sets a required headers to Valorant API calls")]
         [Command("setHeader")]
         public async Task SetHeaderCommand(string headerName, [Remainder] string headerValue)
         {
@@ -48,30 +53,6 @@ namespace DiscordBot.Commands
                 db.AddOrUpdate(customHeader);
                 await db.SaveChangesAsync();
             }
-        }
-
-        [RequireOwner]
-        [Command("image")]
-        public async Task ImageCommand()
-        {
-            var embed2 = new EmbedBuilder
-            {
-                // Embed property can be set within object initializer
-                Title = "Hello world!",
-                Description = "I am a description set by initializer."
-            };
-            var guildEmote = Context.Guild.Emotes.First();
-            embed2.AddField("Name", $"zzz", true);
-            embed2.AddField("Rank", $"yyy", true);
-            embed2.AddField("\u200B", $"\u200B", true);
-
-            embed2.AddField("Name", $"zzz", true);
-            embed2.AddField("Rank", $"yyy", true);
-            embed2.AddField("\u200B", $"\u200B", true);
-
-            var build = embed2.Build();
-            
-            await Context.Channel.SendMessageAsync("test", embed: build);
         }
     }
 }

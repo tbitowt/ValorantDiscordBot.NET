@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -85,6 +86,7 @@ namespace DiscordBot
                 .AddSingleton<ValorantApiService>()
                 .AddSingleton<ExternalApiService>()
                 .AddSingleton<PlayerRankChecker>()
+                .AddSingleton<PlotService>()
                 .BuildServiceProvider();
         }
     }

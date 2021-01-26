@@ -36,7 +36,7 @@ namespace DiscordBot.Services
         {
             using (var db = new DatabaseDbContext())
             {
-                foreach (var valorantAccount in db.ValorantAccount.Include(acc=> acc.DiscordUser).Include(acc => acc.RegisteredGuilds))
+                foreach (var valorantAccount in db.ValorantAccount.Include(acc=> acc.DiscordUser).Include(acc => acc.RegisteredGuilds).Include(acc => acc.RankInfos))
                 {
                     foreach (var valorantAccountRegisteredGuild in valorantAccount.RegisteredGuilds)
                     {
@@ -62,6 +62,22 @@ namespace DiscordBot.Services
                                         $"Account {valorantAccount.DisplayName} has been promoted to {playerRank.RankString} ! Current progress: {playerRank.Progress} / 100");
                                 }
 
+                                var info = new RankInfo()
+                                {
+                                    DateTime = DateTimeOffset.FromUnixTimeMilliseconds(playerRank.LastMatch.MatchStartTime).DateTime,
+                                    Progress = (int)playerRank.LastMatch.RankedRatingAfterUpdate,
+                                    RankInt = (int)playerRank.LastMatch.TierAfterUpdate,
+                                    ValorantAccount = valorantAccount
+                                };
+
+                                if (info.Progress != 0 || info.RankInt != 0)
+                                {
+                                    if(valorantAccount.RankInfos.Any(rankInfo => rankInfo.DateTime == info.DateTime) == false)
+                                        valorantAccount.RankInfos.Add(info);
+                                    db.Update(valorantAccount);
+                                    await db.SaveChangesAsync();
+                                }
+                                    
                                 var playerRankChanged = playerRank.RankInt != valorantAccount.Rank;
                                 if (playerRankChanged)
                                 {

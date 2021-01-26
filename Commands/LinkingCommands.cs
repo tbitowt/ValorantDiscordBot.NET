@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
@@ -6,6 +7,7 @@ using Discord.WebSocket;
 using DiscordBot.Models.Database;
 using DiscordBot.Services;
 using Microsoft.EntityFrameworkCore;
+using ScottPlot.Config.DateTimeTickUnits;
 
 namespace DiscordBot.Commands
 {
@@ -13,7 +15,7 @@ namespace DiscordBot.Commands
     {
         public ValorantApiService ValorantApiService { get; set; }
         public ExternalApiService ExternalApiService { get; set; }
-
+        
         [Command("link")]
         public async Task LinkCommand(IUser user, [Remainder]string subject)
         {
@@ -121,6 +123,7 @@ namespace DiscordBot.Commands
                     RankName = playerRank.RankString,
                     RankProgress = playerRank.Progress
                 };
+                
                 var playerIDs = await ValorantApiService.GetPlayerIds(subject);
                 if (playerIDs == null)
                 {
@@ -142,21 +145,40 @@ namespace DiscordBot.Commands
 
                 else
                 {
-                    var account = user.ValorantAccounts.FirstOrDefault(account => account.Subject == subject);
-                    if (account == null)
+                    valorantAccount = user.ValorantAccounts.FirstOrDefault(account => account.Subject == subject);
+                    if (valorantAccount == null)
                     {
                         user.ValorantAccounts.Add(valorantAccount);
                         await Context.Channel.SendMessageAsync($"Account {valorantAccount.DisplayName} ( {valorantAccount.RankName} ) lined to user {user.Name}");
                     }
                     else
                     {
-                        account.DisplayName = valorantAccount.DisplayName;
-                        account.Rank = valorantAccount.Rank;
-                        account.RankName = valorantAccount.RankName;
-                        account.RankProgress = valorantAccount.RankProgress;
-                        db.Update(account);
+                        valorantAccount.DisplayName = valorantAccount.DisplayName;
+                        valorantAccount.Rank = valorantAccount.Rank;
+                        valorantAccount.RankName = valorantAccount.RankName;
+                        valorantAccount.RankProgress = valorantAccount.RankProgress;
+                        db.Update(valorantAccount);
                         await Context.Channel.SendMessageAsync($"Account {valorantAccount.DisplayName} ( {valorantAccount.RankName} ) already linked to user {user.Name}");
                     }
+                }
+
+                if (valorantAccount.RegisteredGuilds.Any(guild => guild.GuildID == Context.Guild.Id) == false)
+                {
+                    valorantAccount.RegisteredGuilds.Add(new RegisteredGuild(){GuildID = Context.Guild.Id, ValorantAccount = valorantAccount});
+                    db.Update(valorantAccount);
+                }
+
+                await db.SaveChangesAsync();
+                var playerRankHistoty = await ValorantApiService.GetPlayerRankHistory(valorantAccount, DateTime.Today.AddDays(-50));
+                
+                foreach (var rankInfo in playerRankHistoty)
+                {
+                    if (valorantAccount.RankInfos.Any(info => info.DateTime == rankInfo.DateTime) == false)
+                    {
+                        valorantAccount.RankInfos.Add(rankInfo);
+                    }
+
+                    db.Update(valorantAccount);
                 }
 
                 await db.SaveChangesAsync();

@@ -11,17 +11,15 @@ namespace DiscordBot.Commands
     public class GetRanks : ModuleBase<SocketCommandContext>
     {
         public ValorantApiService ValorantApiService { get; set; }
+        public PlotService PlotService { get; set; }
+        
         
         [Command("rank")]
-        public async Task RankCommand()
+        [Summary("Prints rank of all accounts connected to a selected discord user")]
+        public async Task RankCommand([Summary("if empty, current user would be selected")][Name("DiscordUser")]IUser discordUser = null)
         {
-            await RankCommand(Context.User);
-        }
+            discordUser ??= Context.User;
 
-
-        [Command("rank")]
-        public async Task RankCommand(IUser discordUser)
-        {
             using (var db = new DatabaseDbContext())
             {
                 var user = await db.DiscordUsers.Include(user => user.ValorantAccounts)
@@ -58,7 +56,33 @@ namespace DiscordBot.Commands
 
                 await db.SaveChangesAsync();
             }
+        }
 
+        [Command("history")]
+        public async Task HistoryCommand(string accountName)
+        {
+            using (var db = new DatabaseDbContext())
+            {
+                var account = await db.ValorantAccount.Include(user => user.RankInfos)
+                    .FirstOrDefaultAsync(acc => acc.DisplayName == accountName);
+
+                if (account == null)
+                {
+                    await Context.Channel.SendMessageAsync(
+                        "No account with specified ID found. You must specify valorant account name");
+                }
+
+                if (account.RankInfos.Count == 0)
+                {
+                    
+                }
+                else
+                
+                {
+                    var historyPlot = PlotService.GetHistoryPlot(account);
+                    await Context.Channel.SendFileAsync(historyPlot, "history.png");
+                }
+            }
         }
     }
 }

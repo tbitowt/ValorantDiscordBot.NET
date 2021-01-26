@@ -13,12 +13,14 @@ namespace DiscordBot.Services
         private readonly CommandService _commands;
         private readonly DiscordSocketClient _discord;
         private readonly IServiceProvider _services;
+        private readonly EnvCheckerService _envChecker;
 
         public CommandHandlingService(IServiceProvider services)
         {
             _commands = services.GetRequiredService<CommandService>();
             _discord = services.GetRequiredService<DiscordSocketClient>();
             _services = services;
+            _envChecker = services.GetRequiredService<EnvCheckerService>();
 
             // Hook CommandExecuted to handle post-command-execution logic.
             _commands.CommandExecuted += CommandExecutedAsync;
@@ -44,7 +46,7 @@ namespace DiscordBot.Services
             // Perform prefix check. You may want to replace this with
             // (!message.HasCharPrefix('!', ref argPos))
             // for a more traditional command format like !help.
-            if (!message.HasStringPrefix("!!", ref argPos)) return;
+            if (!message.HasStringPrefix(_envChecker.Bot_Prefix, ref argPos)) return;
 
             var context = new SocketCommandContext(_discord, message);
             // Perform the execution of the command. In this method,

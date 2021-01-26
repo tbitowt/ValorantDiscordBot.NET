@@ -10,6 +10,7 @@ namespace DiscordBot.Services
         public string Valorant_UserName { get; private set; }
         public string Valorant_Password { get; private set; }
         public string Discord_Token { get; private set; }
+        public string Bot_Prefix { get; private set; }
 
         public EnvCheckerService(EnvReader reader)
         {
@@ -41,6 +42,15 @@ namespace DiscordBot.Services
             try
             {
                 Discord_Token = GetValue("DISCORD_TOKEN");
+            }
+            catch (ArgumentException)
+            {
+                result = false;
+            }
+
+            try
+            {
+                Bot_Prefix = GetValue("BOT_PREFIX");
             }
             catch (ArgumentException)
             {

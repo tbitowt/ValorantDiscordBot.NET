@@ -230,9 +230,9 @@ namespace DiscordBot.Services
                             RankInt = (int) dataMatch.TierAfterUpdate,
                             ValorantAccount = account
                         };
-                        
+
                         if (info.DateTime < beginDateTime)
-                            break;
+                            return result;
                         
                         if(info.Progress == 0 && info.RankInt == 0)
                             continue;
@@ -243,7 +243,7 @@ namespace DiscordBot.Services
                 }
                 else
                 {
-                    Console.WriteLine("GetPlayerRankHistory result is unsuccessful");
+                    Console.WriteLine("GetPlayerRankHistory result is unsuccessful or match history ended");
                     break;
                 }
             } while (true);

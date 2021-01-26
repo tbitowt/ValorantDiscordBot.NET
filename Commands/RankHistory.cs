@@ -11,8 +11,7 @@ namespace DiscordBot.Commands
     public class RankHistory : ModuleBase<SocketCommandContext>
     {
         public ValorantApiService ValorantApiService { get; set; }
-
-        [RequireOwner]
+        
         [Command("getRankHistory")]
         public async Task GetRankHistoryCommand(string accountName, int days = 50)
         {
