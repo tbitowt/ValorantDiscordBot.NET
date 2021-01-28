@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using DiscordBot.Models.API;
 using DiscordBot.Models.Database;
+using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
 using RestSharp;
@@ -16,6 +19,7 @@ namespace DiscordBot.Services
 {
     public class ValorantApiService : IValorantApiService
     {
+        public ILogger<ValorantApiService> Logger { get; }
         private CookieContainer _cookieContainer = new();
         private readonly EnvCheckerService _envCheckerService;
 
@@ -28,18 +32,39 @@ namespace DiscordBot.Services
         };
 
         private string _region;
-        private readonly AsyncRetryPolicy<IRestResponse> _retryPolicy;
+        private readonly IAsyncPolicy<IRestResponse> _retryPolicy;
 
-        public ValorantApiService(EnvCheckerService envCheckerService)
+        public ValorantApiService(EnvCheckerService envCheckerService, ILogger<ValorantApiService> logger)
         {
+            Logger = logger;
             RestClient.CookieContainer = _cookieContainer;
             RestClient.AddHandler("text/plain", new JsonDeserializer());
             RestClient.AllowMultipleDefaultParametersWithSameName = false;
 
 
             _envCheckerService = envCheckerService;
-            _retryPolicy = Policy.HandleResult<IRestResponse>(r => r.IsSuccessful == false)
+            var rateLimitedPolicy = Policy.HandleResult<IRestResponse>(p => p.StatusCode == HttpStatusCode.TooManyRequests)
+                .FallbackAsync(FallbackAction, OnFallback);
+
+            var loginRetryPolicy = Policy.HandleResult<IRestResponse>(r => r.IsSuccessful == false && r.StatusCode != HttpStatusCode.TooManyRequests)
                 .RetryAsync(async (result, i) => await Login());
+
+            _retryPolicy  = rateLimitedPolicy.WrapAsync(loginRetryPolicy);
+            
+
+        }
+
+        private async Task OnFallback(DelegateResult<IRestResponse> response, Context arg2)
+        {
+            var retryHeader = response.Result.Headers.SingleOrDefault(h => h.Name == "Retry-After");
+
+            Logger.LogError($"Valorant API request was rate-limited. Should retry in: {retryHeader?.Value}");
+            return;
+        }
+
+        private async Task<IRestResponse> FallbackAction(DelegateResult<IRestResponse> response, Context arg2, CancellationToken arg3)
+        {
+            return response.Result;
         }
 
         private RestClientFactory<IRestResponse> RestClient => RestClientFactory<IRestResponse>.Create(_retryPolicy);
@@ -74,7 +99,6 @@ namespace DiscordBot.Services
             var request = new RestRequest($"{GetBasePath()}/mmr/v1/players/{playerId}", Method.GET);
 
             var response = await RestClient.ExecuteAsync<GetPlayerMmr>(request);
-
             if (response.IsSuccessful)
             {
                 var result = new PlayerRank();

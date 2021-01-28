@@ -7,43 +7,43 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace DiscordBot.Commands
 {
-    public class LinkingCommands : BaseCommandModule
+    public class LinkingCommands : LoggerCommandModule
     {
-        public ValorantApiService ValorantApiService { get; set; }
-        public ExternalApiService ExternalApiService { get; set; }
+        public ValorantApiService ValorantApiService { get;  }
+        public ExternalApiService ExternalApiService { get;  }
 
-        [Description("aaa")]
+        public LinkingCommands(ILoggerFactory loggerFactory, ValorantApiService valorantApiService, ExternalApiService externalApiService) : base(loggerFactory)
+        {
+            ValorantApiService = valorantApiService;
+            ExternalApiService = externalApiService;
+        }
+        
         [Command("link")]
         public async Task LinkCommand(CommandContext ctx, DiscordUser user, [RemainingText] string subject)
         {
             await ctx.TriggerTypingAsync();
+
+            Logger.LogInformation($"Trying to link account {subject} to {user.Username}");
+
             if (subject.Contains('#'))
             {
                 var strings = subject.Split('#');
 
                 subject = await ExternalApiService.GetPlayerPuuid(strings[0], strings[1]);
+                Logger.LogInformation($"User specified valorant id#tag. Found puuid: {subject}");
             }
-
-
+            
             await LinkAccount(ctx, user, subject);
         }
-
-        [Description("bbb")]
+        
         [Command("link")]
         public async Task LinkCommand(CommandContext ctx, [RemainingText] string subject)
         {
-            await ctx.Channel.TriggerTypingAsync();
-            if (subject.Contains('#'))
-            {
-                var strings = subject.Split('#');
-
-                subject = await ExternalApiService.GetPlayerPuuid(strings[0], strings[1]);
-            }
-
-            await LinkAccount(ctx, ctx.User, subject);
+            await LinkCommand(ctx, ctx.User, subject);
         }
 
         [Command("unlink")]
@@ -110,6 +110,7 @@ namespace DiscordBot.Commands
                 if (playerRank == null)
                 {
                     await ctx.Channel.SendMessageAsync("Could not retrieve Player rank for selected id");
+                    Logger.LogError($"Could not retrieve Player rank for {subject}");
                     return;
                 }
 
@@ -125,6 +126,7 @@ namespace DiscordBot.Commands
                 if (playerIDs == null)
                 {
                     await ctx.Channel.SendMessageAsync("Could not retrieve Player IDs for selected id");
+                    Logger.LogError($"Could not retrieve Player IDs for {subject}");
                     return;
                 }
 

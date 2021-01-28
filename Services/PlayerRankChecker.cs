@@ -14,6 +14,7 @@ namespace DiscordBot.Services
         private readonly ValorantApiService _valorantApiService;
 
         private Timer _timer;
+        private int _currentAccount = 0;
 
         public PlayerRankChecker(ValorantApiService valorantApiService, BotService botService,
             ILogger<PlayerRankChecker> logger)
@@ -27,20 +28,34 @@ namespace DiscordBot.Services
 
         public void Start()
         {
-            Logger.LogInformation("Test");
             _timer = new Timer(
                 async e => { await Update(); },
                 null,
                 TimeSpan.FromSeconds(5),
-                TimeSpan.FromMinutes(15));
+                TimeSpan.FromSeconds(30));
         }
 
         private async Task Update()
         {
             using (var db = new DatabaseDbContext())
             {
-                foreach (var valorantAccount in db.ValorantAccount.Include(acc => acc.DbDiscordUser)
-                    .Include(acc => acc.RegisteredGuilds).Include(acc => acc.RankInfos))
+                var accounts = db.ValorantAccount.Include(acc => acc.DbDiscordUser)
+                    .Include(acc => acc.RegisteredGuilds).Include(acc => acc.RankInfos).ToList();
+
+                var valorantAccount = accounts[_currentAccount];
+                Logger.LogInformation($"Running RankChecker on player {valorantAccount.DisplayName}");
+
+                _currentAccount++;
+                if (_currentAccount >= accounts.Count)
+                    _currentAccount = 0;
+
+                var playerRank = await _valorantApiService.GetPlayerRank(valorantAccount.Subject);
+                if (playerRank == null)
+                {
+                    Logger.LogError("Could not update playerRank");
+                    return;
+                }
+
                 foreach (var valorantAccountRegisteredGuild in valorantAccount.RegisteredGuilds)
                 {
                     var guildConfig = db.GuildConfigs.FirstOrDefault(guild =>
@@ -50,8 +65,6 @@ namespace DiscordBot.Services
                         var channel = await _botService.DiscordClient.GetChannelAsync(guildConfig.UpdatesChannel.Value);
                         if (channel != null)
                         {
-                            var playerRank = await _valorantApiService.GetPlayerRank(valorantAccount.Subject);
-
                             if (playerRank.RankInt < valorantAccount.Rank)
                                 await channel.SendMessageAsync(
                                     $"Account {valorantAccount.DisplayName} has been downgraded to {playerRank.RankString} . Current progress: {playerRank.Progress} / 100");

@@ -6,12 +6,18 @@ using DiscordBot.Services;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace DiscordBot.Commands
 {
-    public class RankHistory : BaseCommandModule
+    public class RankHistory : LoggerCommandModule
     {
-        public ValorantApiService ValorantApiService { get; set; }
+        public ValorantApiService ValorantApiService { get;  }
+
+        public RankHistory(ILoggerFactory loggerFactory, ValorantApiService valorantApiService) : base(loggerFactory)
+        {
+            ValorantApiService = valorantApiService;
+        }
 
         [Hidden]
         [RequireOwner]
@@ -29,11 +35,11 @@ namespace DiscordBot.Commands
                     return;
                 }
 
-                var playerRankHistoty =
+                var playerRankHistory =
                     await ValorantApiService.GetPlayerRankHistory(account, DateTime.Today.AddDays(days * -1));
 
                 var numberAdded = 0;
-                foreach (var rankInfo in playerRankHistoty)
+                foreach (var rankInfo in playerRankHistory)
                     if (account.RankInfos.Any(info => info.DateTime == rankInfo.DateTime) == false)
                     {
                         account.RankInfos.Add(rankInfo);

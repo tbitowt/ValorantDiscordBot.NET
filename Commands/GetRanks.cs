@@ -12,17 +12,20 @@ namespace DiscordBot.Commands
 {
     public class GetRanks : LoggerCommandModule
     {
-        public GetRanks(ILoggerFactory loggerFactory) : base(loggerFactory)
+        public ValorantApiService ValorantApiService { get; }
+
+        public PlotService PlotService { get; }
+
+        public GetRanks(ILoggerFactory loggerFactory, ValorantApiService valorantApiService, PlotService plotService) : base(loggerFactory)
         {
+            ValorantApiService = valorantApiService;
+            PlotService = plotService;
         }
-
-        public ValorantApiService ValorantApiService { get; set; }
-        public PlotService PlotService { get; set; }
-
 
         [Command("rank")]
         public async Task RankCommand(CommandContext ctx, DiscordUser discordUser = null)
         {
+            LogCommandExecuted(ctx);
             discordUser ??= ctx.User;
 
             using (var db = new DatabaseDbContext())
@@ -33,6 +36,7 @@ namespace DiscordBot.Commands
                 if (user == null || user.ValorantAccounts.Count == 0)
                 {
                     await ctx.Channel.SendMessageAsync("You have no connected accounts");
+                    Logger.LogInformation($"User {discordUser.Username} has no ValorantAccounts connected");
                     return;
                 }
 
@@ -65,14 +69,18 @@ namespace DiscordBot.Commands
         [Command("history")]
         public async Task HistoryCommand(CommandContext ctx, string accountName)
         {
+            LogCommandExecuted(ctx);
             using (var db = new DatabaseDbContext())
             {
                 var account = await db.ValorantAccount.Include(user => user.RankInfos)
                     .FirstOrDefaultAsync(acc => acc.DisplayName == accountName);
 
                 if (account == null)
+                {
                     await ctx.Channel.SendMessageAsync(
                         "No account with specified ID found. You must specify valorant account name");
+                    Logger.LogInformation($"Cannot find Valorant Account {accountName}");
+                }
 
                 if (account.RankInfos.Count != 0)
                 {

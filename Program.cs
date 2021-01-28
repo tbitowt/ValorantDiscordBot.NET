@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using DiscordBot.Models.Database;
 using DiscordBot.Services;
@@ -19,11 +20,13 @@ namespace DiscordBot
     {
         public static void Main(string[] args)
         {
-            Log.Logger = new LoggerConfiguration()
+            var loggerConfiguration = new LoggerConfiguration()
                 .WriteTo.Console(
                     outputTemplate:
-                    "[{Timestamp:HH:mm:ss} {Level:u3}] <{SourceContext}>\t{Message:j} {NewLine}{Exception}")
-                .CreateLogger();
+                    "[{Timestamp:HH:mm:ss} {Level:u3}] <{SourceContext}>\t{Message:j} {NewLine}{Exception}");
+
+            Log.Logger = loggerConfiguration.CreateLogger();
+            
             MainAsync().GetAwaiter().GetResult();
         }
 
