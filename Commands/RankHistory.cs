@@ -22,7 +22,7 @@ namespace DiscordBot.Commands
         [Hidden]
         [RequireOwner]
         [Command("getRankHistory")]
-        public async Task GetRankHistoryCommand(CommandContext ctx, string accountName, int days = 50)
+        public async Task GetRankHistoryCommand(CommandContext ctx, [RemainingText]string accountName)
         {
             await ctx.Channel.TriggerTypingAsync();
             using (var db = new DatabaseDbContext())
@@ -36,7 +36,7 @@ namespace DiscordBot.Commands
                 }
 
                 var playerRankHistory =
-                    await ValorantApiService.GetPlayerRankHistory(account, DateTime.Today.AddDays(days * -1));
+                    await ValorantApiService.GetPlayerRankHistory(account, DateTime.Today.AddDays(50 * -1));
 
                 var numberAdded = 0;
                 foreach (var rankInfo in playerRankHistory)

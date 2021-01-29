@@ -72,11 +72,19 @@ namespace DiscordBot.Services
                             if (playerRank.RankInt > valorantAccount.Rank)
                                 await channel.SendMessageAsync(
                                     $"Account {valorantAccount.DisplayName} has been promoted to {playerRank.RankString} ! Current progress: {playerRank.Progress} / 100");
-
+                            DateTime dt;
+                            if (playerRank.LastMatch != null)
+                            {
+                                dt = DateTimeOffset.FromUnixTimeMilliseconds(playerRank.LastMatch.MatchStartTime)
+                                    .DateTime;
+                            }
+                            else
+                            {
+                                dt = DateTime.Now;
+                            }
                             var info = new RankInfo
                             {
-                                DateTime = DateTimeOffset.FromUnixTimeMilliseconds(playerRank.LastMatch.MatchStartTime)
-                                    .DateTime,
+                                DateTime = dt,
                                 Progress = (int) playerRank.LastMatch.RankedRatingAfterUpdate,
                                 RankInt = (int) playerRank.LastMatch.TierAfterUpdate,
                                 ValorantAccount = valorantAccount

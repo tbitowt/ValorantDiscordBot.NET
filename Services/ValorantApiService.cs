@@ -106,14 +106,17 @@ namespace DiscordBot.Services
                 result.RankString = _rank_map[result.RankInt];
                 result.Progress = response.Data.QueueSkills.Competitive.TierProgress;
                 result.MatchesLeftForRank = response.Data.QueueSkills.Competitive.CurrentSeasonGamesNeededForRating;
-
-                var dataLatestCompetitiveUpdate = response.Data.LatestCompetitiveUpdate;
-                result.LastMatch = new Match
+                if (response.Data.LatestCompetitiveUpdate != null)
                 {
-                    MatchStartTime = dataLatestCompetitiveUpdate.MatchStartTime,
-                    TierAfterUpdate = dataLatestCompetitiveUpdate.TierAfterUpdate,
-                    RankedRatingAfterUpdate = dataLatestCompetitiveUpdate.RankedRatingAfterUpdate
-                };
+                    var dataLatestCompetitiveUpdate = response.Data.LatestCompetitiveUpdate;
+                    result.LastMatch = new Match
+                    {
+                        MatchStartTime = dataLatestCompetitiveUpdate.MatchStartTime,
+                        TierAfterUpdate = dataLatestCompetitiveUpdate.TierAfterUpdate,
+                        RankedRatingAfterUpdate = dataLatestCompetitiveUpdate.RankedRatingAfterUpdate
+                    };
+                }
+
                 return result;
             }
 
