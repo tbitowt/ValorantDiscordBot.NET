@@ -3,14 +3,16 @@ using System;
 using DiscordBot.Models.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace DiscordBot.Migrations
 {
     [DbContext(typeof(DatabaseDbContext))]
-    partial class DbContextServiceModelSnapshot : ModelSnapshot
+    [Migration("20210129124209_Added player region")]
+    partial class Addedplayerregion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

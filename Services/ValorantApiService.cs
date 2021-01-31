@@ -17,7 +17,7 @@ using Match = DiscordBot.Models.API.Match;
 
 namespace DiscordBot.Services
 {
-    public class ValorantApiService : IValorantApiService
+    public class ValorantApiService
     {
         public ILogger<ValorantApiService> Logger { get; }
         private CookieContainer _cookieContainer = new();
@@ -30,8 +30,7 @@ namespace DiscordBot.Services
             "Platinum 3", "Diamond 1", "Diamond 2", "Diamond 3", "Immortal 1", "Immortal 2", "Immortal 3",
             "Radiant"
         };
-
-        private string _region;
+        
         private readonly IAsyncPolicy<IRestResponse> _retryPolicy;
 
         public ValorantApiService(EnvCheckerService envCheckerService, ILogger<ValorantApiService> logger)
@@ -94,9 +93,9 @@ namespace DiscordBot.Services
             return true;
         }
 
-        public async Task<PlayerRank> GetPlayerRank(string playerId)
+        public async Task<PlayerRank> GetPlayerRank(string region, string playerId)
         {
-            var request = new RestRequest($"{GetBasePath()}/mmr/v1/players/{playerId}", Method.GET);
+            var request = new RestRequest($"{GetBasePath(region)}/mmr/v1/players/{playerId}", Method.GET);
 
             var response = await RestClient.ExecuteAsync<GetPlayerMmr>(request);
             if (response.IsSuccessful)
@@ -124,9 +123,9 @@ namespace DiscordBot.Services
             return null;
         }
 
-        public async Task<ValorantPlayerIds> GetPlayerIds(string playerId)
+        public async Task<ValorantPlayerIds> GetPlayerIds(string region, string playerId)
         {
-            var request = new RestRequest($"{GetBasePath()}/name-service/v2/players", Method.PUT);
+            var request = new RestRequest($"{GetBasePath(region)}/name-service/v2/players", Method.PUT);
             var ids = new[] {playerId};
             request.AddJsonBody(ids);
             var result = await RestClient.ExecuteAsync<List<PlayerIDs>>(request);
@@ -145,14 +144,9 @@ namespace DiscordBot.Services
             return null;
         }
 
-        public void SetRegion(string region)
+        private Uri GetBasePath(string region)
         {
-            _region = region;
-        }
-
-        private Uri GetBasePath()
-        {
-            return new($"https://pd.{_region}.a.pvp.net");
+            return new($"https://pd.{region}.a.pvp.net");
         }
 
         private async Task<bool> GetAuthorization()
@@ -216,9 +210,9 @@ namespace DiscordBot.Services
             return false;
         }
 
-        public async Task<List<RankInfo>> GetPlayerRankHistory(ValorantAccount account, DateTime beginDateTime)
+        public async Task<List<RankInfo>> GetPlayerRankHistory(string region, ValorantAccount account, DateTime beginDateTime)
         {
-            var request = new RestRequest($"{GetBasePath()}/mmr/v1/players/{account.Subject}/competitiveupdates",
+            var request = new RestRequest($"{GetBasePath(region)}/mmr/v1/players/{account.Subject}/competitiveupdates",
                 Method.GET);
 
 

@@ -18,14 +18,4 @@ namespace DiscordBot.Services
         public string Tag { get; set; }
     }
 
-    public interface IValorantApiService
-    {
-        string AccessToken { get; }
-        string EntitlementToken { get; }
-        Task<bool> Login();
-
-        Task<PlayerRank> GetPlayerRank(string playerId);
-
-        Task<ValorantPlayerIds> GetPlayerIds(string playerId);
-    }
 }

@@ -81,6 +81,34 @@ namespace DiscordBot.Commands
             }
         }
 
+        [Command("setRegion")]
+        public async Task SetRegionCommand(CommandContext ctx, string region, [RemainingText]string account)
+        {
+            Region reg;
+            
+            var parsed = Enum.TryParse(region, true, out reg);
+            if (parsed == false)
+            {
+                
+                await ctx.Channel.SendMessageAsync($"Could not parse region. Possible values: {string.Join(", ", Enum.GetNames(typeof(Region)))}");
+                return;
+            }
+            using (var db = new DatabaseDbContext())
+            {
+                var acc = db.ValorantAccount.FirstOrDefault(acc => acc.DisplayName == account);
+                if (acc == null)
+                {
+                    await ctx.Channel.SendMessageAsync("Cannot find specified account");
+                    return;
+                }
+
+                acc.Region = reg;
+                db.Update(acc);
+                await db.SaveChangesAsync();
+                await ctx.Channel.SendMessageAsync("Region updated");
+            }
+        }
+
         private async Task UnlinkAccount(CommandContext ctx, DiscordUser dbDiscordUser, string subject)
         {
             using (var db = new DatabaseDbContext())
@@ -105,7 +133,8 @@ namespace DiscordBot.Commands
         {
             using (var db = new DatabaseDbContext())
             {
-                var playerRank = await ValorantApiService.GetPlayerRank(subject);
+                var guild = db.GuildConfigs.FirstOrDefault(g => g.Guild == ctx.Guild.Id);
+                var playerRank = await ValorantApiService.GetPlayerRank(guild.Region, subject);
                 if (playerRank == null)
                 {
                     await ctx.Channel.SendMessageAsync("Could not retrieve Player rank for selected id");
@@ -113,9 +142,9 @@ namespace DiscordBot.Commands
                     return;
                 }
 
-                
 
-                var playerIDs = await ValorantApiService.GetPlayerIds(subject);
+
+                var playerIDs = await ValorantApiService.GetPlayerIds(guild.Region, subject);
                 if (playerIDs == null)
                 {
                     await ctx.Channel.SendMessageAsync("Could not retrieve Player IDs for selected id");
@@ -132,60 +161,25 @@ namespace DiscordBot.Commands
                     DisplayName = $"{playerIDs.Name}#{playerIDs.Tag}"
                 };
 
-                var user = db.DiscordUsers.Include(user => user.ValorantAccounts)
-                    .SingleOrDefault(user => user.ID == discordUser.Id);
-                if (user == null)
-                {
-                    user = new DbDiscordUser {Name = discordUser.Username, ID = discordUser.Id};
-                    user.ValorantAccounts.Add(newValorantAccount);
-                    await db.DiscordUsers.AddAsync(user);
-                    await ctx.Channel.SendMessageAsync(
-                        $"Account {newValorantAccount.DisplayName} ( {newValorantAccount.RankName} )  lined to user {user.Name}");
-                }
+                var valorantDbService = new ValorantDbService();
+                var accountLinked = await valorantDbService.LinkAccountToDiscordUser(newValorantAccount, discordUser);
 
+                await valorantDbService.AsignAccountToGuild(newValorantAccount, ctx.Guild.Id);
+
+                var playerRankHistoty =
+                    await ValorantApiService.GetPlayerRankHistory(guild.Region, newValorantAccount, DateTime.Today.AddDays(-50));
+                await valorantDbService.AddLastAccountMatch(newValorantAccount, playerRankHistoty);
+
+                if (accountLinked)
+                {
+                    await ctx.Channel.SendMessageAsync(
+                        $"Account {newValorantAccount.DisplayName} ( {newValorantAccount.RankName} )  lined to user {discordUser.Username}");
+                }
                 else
                 {
-                    var existingAccount = user.ValorantAccounts.FirstOrDefault(account => account.Subject == subject);
-                    if (existingAccount == null)
-                    {
-                        user.ValorantAccounts.Add(newValorantAccount);
-                        await ctx.Channel.SendMessageAsync(
-                            $"Account {newValorantAccount.DisplayName} ( {newValorantAccount.RankName} ) lined to user {user.Name}");
-                    }
-                    else
-                    {
-                        
-                        existingAccount.DisplayName = newValorantAccount.DisplayName;
-                        existingAccount.Rank = newValorantAccount.Rank;
-                        existingAccount.RankName = newValorantAccount.RankName;
-                        existingAccount.RankProgress = newValorantAccount.RankProgress;
-                        db.Update(existingAccount);
-                        await ctx.Channel.SendMessageAsync(
-                            $"Account {existingAccount.DisplayName} ( {existingAccount.RankName} ) already linked to user {user.Name}");
-                        newValorantAccount = existingAccount;
-                    }
+                    await ctx.Channel.SendMessageAsync(
+                        $"Account {newValorantAccount.DisplayName} ( {newValorantAccount.RankName} ) already linked to user {discordUser.Username}");
                 }
-
-                if (newValorantAccount.RegisteredGuilds.Any(guild => guild.GuildID == ctx.Guild.Id) == false)
-                {
-                    newValorantAccount.RegisteredGuilds.Add(new RegisteredGuild
-                        {GuildID = ctx.Guild.Id, ValorantAccount = newValorantAccount });
-                    db.Update(newValorantAccount);
-                }
-
-                await db.SaveChangesAsync();
-                var playerRankHistoty =
-                    await ValorantApiService.GetPlayerRankHistory(newValorantAccount, DateTime.Today.AddDays(-50));
-
-                foreach (var rankInfo in playerRankHistoty)
-                {
-                    if (newValorantAccount.RankInfos.Any(info => info.DateTime == rankInfo.DateTime) == false)
-                        newValorantAccount.RankInfos.Add(rankInfo);
-
-                    db.Update(newValorantAccount);
-                }
-
-                await db.SaveChangesAsync();
             }
         }
     }

@@ -45,7 +45,6 @@ namespace DiscordBot
                 }
 
                 var valorantApiService = services.GetRequiredService<ValorantApiService>();
-                valorantApiService.SetRegion("eu");
 
                 await using (var db = new DatabaseDbContext())
                 {

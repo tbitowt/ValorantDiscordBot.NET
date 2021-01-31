@@ -32,7 +32,7 @@ namespace DiscordBot.Services
                 async e => { await Update(); },
                 null,
                 TimeSpan.FromSeconds(5),
-                TimeSpan.FromSeconds(30));
+                TimeSpan.FromSeconds(10));
         }
 
         private async Task Update()
@@ -49,7 +49,7 @@ namespace DiscordBot.Services
                 if (_currentAccount >= accounts.Count)
                     _currentAccount = 0;
 
-                var playerRank = await _valorantApiService.GetPlayerRank(valorantAccount.Subject);
+                var playerRank = await _valorantApiService.GetPlayerRank(valorantAccount.Region.ToString(), valorantAccount.Subject);
                 if (playerRank == null)
                 {
                     Logger.LogError("Could not update playerRank");
@@ -72,32 +72,32 @@ namespace DiscordBot.Services
                             if (playerRank.RankInt > valorantAccount.Rank)
                                 await channel.SendMessageAsync(
                                     $"Account {valorantAccount.DisplayName} has been promoted to {playerRank.RankString} ! Current progress: {playerRank.Progress} / 100");
-                            DateTime dt;
+
                             if (playerRank.LastMatch != null)
                             {
-                                dt = DateTimeOffset.FromUnixTimeMilliseconds(playerRank.LastMatch.MatchStartTime)
+                                var dt = DateTimeOffset.FromUnixTimeMilliseconds(playerRank.LastMatch.MatchStartTime)
                                     .DateTime;
+                                var info = new RankInfo
+                                {
+                                    DateTime = dt,
+                                    Progress = (int)playerRank.LastMatch.RankedRatingAfterUpdate,
+                                    RankInt = (int)playerRank.LastMatch.TierAfterUpdate,
+                                    ValorantAccount = valorantAccount
+                                };
+
+                                if (info.Progress != 0 || info.RankInt != 0)
+                                {
+                                    if (valorantAccount.RankInfos.Any(rankInfo => rankInfo.DateTime == info.DateTime) ==
+                                        false)
+                                        valorantAccount.RankInfos.Add(info);
+                                    db.Update(valorantAccount);
+                                    await db.SaveChangesAsync();
+                                }
                             }
                             else
                             {
-                                dt = DateTime.Now;
                             }
-                            var info = new RankInfo
-                            {
-                                DateTime = dt,
-                                Progress = (int) playerRank.LastMatch.RankedRatingAfterUpdate,
-                                RankInt = (int) playerRank.LastMatch.TierAfterUpdate,
-                                ValorantAccount = valorantAccount
-                            };
-
-                            if (info.Progress != 0 || info.RankInt != 0)
-                            {
-                                if (valorantAccount.RankInfos.Any(rankInfo => rankInfo.DateTime == info.DateTime) ==
-                                    false)
-                                    valorantAccount.RankInfos.Add(info);
-                                db.Update(valorantAccount);
-                                await db.SaveChangesAsync();
-                            }
+                            
 
                             var playerRankChanged = playerRank.RankInt != valorantAccount.Rank;
                             if (playerRankChanged)

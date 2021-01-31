@@ -44,10 +44,10 @@ namespace DiscordBot.Commands
                 foreach (var valorantAccount in user.ValorantAccounts.OrderByDescending(val => val.Rank)
                     .ThenByDescending(val => val.RankProgress))
                 {
-                    var playerRank = await ValorantApiService.GetPlayerRank(valorantAccount.Subject);
+                    var playerRank = await ValorantApiService.GetPlayerRank(valorantAccount.Region.ToString(), valorantAccount.Subject);
                     valorantAccount.UpdateRank(playerRank);
 
-                    var playerIDs = await ValorantApiService.GetPlayerIds(valorantAccount.Subject);
+                    var playerIDs = await ValorantApiService.GetPlayerIds(valorantAccount.Region.ToString(), valorantAccount.Subject);
                     if (playerIDs != null) valorantAccount.DisplayName = $"{playerIDs.Name}#{playerIDs.Tag}";
 
                     var guildEmote = ctx.Guild.Emojis.FirstOrDefault(emote =>
@@ -59,6 +59,45 @@ namespace DiscordBot.Commands
 
                     db.Update(valorantAccount);
                 }
+
+                await ctx.Channel.SendMessageAsync(embed: embed.Build());
+
+                await db.SaveChangesAsync();
+            }
+        }
+
+        [Command("rank")]
+        public async Task RankCommand(CommandContext ctx, [RemainingText]string account)
+        {
+            LogCommandExecuted(ctx);
+
+            using (var db = new DatabaseDbContext())
+            {
+                var acc = db.ValorantAccount.FirstOrDefault(acc => acc.DisplayName == account);
+
+                if (acc == null)
+                {
+                    await ctx.Channel.SendMessageAsync($"Cannot find account {account}");
+                    Logger.LogInformation($"Account {account} not found");
+                    return;
+                }
+
+                var embed = new DiscordEmbedBuilder().WithTitle($"Rank of {account}");
+                
+                var playerRank = await ValorantApiService.GetPlayerRank(acc.Region.ToString(), acc.Subject);
+                acc.UpdateRank(playerRank);
+
+                var playerIDs = await ValorantApiService.GetPlayerIds(acc.Region.ToString(), acc.Subject);
+                if (playerIDs != null) acc.DisplayName = $"{playerIDs.Name}#{playerIDs.Tag}";
+
+                var guildEmote = ctx.Guild.Emojis.FirstOrDefault(emote =>
+                    emote.Value.Name == acc.RankName.Replace(" ", ""));
+                embed.AddField("Name", acc.DisplayName, true);
+                embed.AddField("Rank", $"{guildEmote.Value}{acc.RankName}", true); //todo: add emoji
+                embed.AddField("Progress", $"{acc.RankProgress} / 100", true);
+
+
+                db.Update(acc);
 
                 await ctx.Channel.SendMessageAsync(embed: embed.Build());
 

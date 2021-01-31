@@ -36,7 +36,7 @@ namespace DiscordBot.Commands
                 }
 
                 var playerRankHistory =
-                    await ValorantApiService.GetPlayerRankHistory(account, DateTime.Today.AddDays(50 * -1));
+                    await ValorantApiService.GetPlayerRankHistory(account.Region.ToString(), account, DateTime.Today.AddDays(50 * -1));
 
                 var numberAdded = 0;
                 foreach (var rankInfo in playerRankHistory)
